@@ -1,3 +1,167 @@
 {
-  "demos": []
+  "demos": [
+    {
+      "id": "arena-blasters",
+      "name": "Arena Blasters",
+      "title": "Arena Blasters",
+      "description": "Top-down arena shooter for 1-8 players: thrust, turn, blast asteroids and each other, first to 15 points wins.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 8
+      },
+      "tags": [
+        "shooter",
+        "physics",
+        "particles",
+        "audio"
+      ],
+      "controls": [
+        "A/D: turn",
+        "W: thrust",
+        "J / click: fire"
+      ],
+      "featured": true
+    },
+    {
+      "id": "sky-hoppers",
+      "name": "Sky Hoppers",
+      "title": "Sky Hoppers",
+      "description": "Co-op platformer for 1-4 players: run and jump through a tilemap level with coins, spikes, moving platforms and shared checkpoints.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 4
+      },
+      "tags": [
+        "platformer",
+        "co-op",
+        "tilemap"
+      ],
+      "controls": [
+        "A/D: move",
+        "Space: jump"
+      ],
+      "featured": true
+    },
+    {
+      "id": "paddle-rush",
+      "name": "Paddle Rush",
+      "title": "Paddle Rush",
+      "description": "Air hockey with an AI opponent when you are alone. In team mode everyone on a side steers the same paddle: inputs are averaged in real time.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 8
+      },
+      "tags": [
+        "sports",
+        "shared-control",
+        "ai"
+      ],
+      "controls": [
+        "WASD / arrows: move paddle"
+      ],
+      "featured": true
+    },
+    {
+      "id": "cube-racers",
+      "name": "Cube Racers",
+      "title": "Cube Racers",
+      "description": "WebGL arcade racer for 1-6 players: drive kart cubes around a walled circuit with cones and chicanes, chase camera, checkpoints and lap timing.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "3d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 6
+      },
+      "tags": [
+        "racing",
+        "webgl",
+        "3d-physics"
+      ],
+      "controls": [
+        "W/S: throttle",
+        "A/D: steer",
+        "E / Enter: reset to checkpoint"
+      ],
+      "featured": true
+    },
+    {
+      "id": "tower-together",
+      "name": "Tower Together",
+      "title": "Tower Together",
+      "description": "Co-op tower defence for 1-4 players: click or tap to build turrets along the road, share one purse of gold and hold the base through escalating waves.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 4
+      },
+      "tags": [
+        "tower-defense",
+        "co-op",
+        "pointer",
+        "shared-control"
+      ],
+      "controls": [
+        "Click / tap: build tower"
+      ],
+      "featured": true
+    },
+    {
+      "id": "starter-2d",
+      "name": "Starter 2D",
+      "title": "Starter 2D",
+      "description": "A player, a few platforms and a following camera. The blank canvas for a new 2D game.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": false,
+      "players": {
+        "min": 1,
+        "max": 1
+      },
+      "tags": [
+        "template",
+        "platformer"
+      ],
+      "controls": [
+        "A/D or arrows: move",
+        "Space: jump"
+      ],
+      "featured": false,
+      "template": true
+    },
+    {
+      "id": "starter-3d",
+      "name": "Starter 3D",
+      "title": "Starter 3D",
+      "description": "A lit cube on a plane with an orbit camera. The blank canvas for a new 3D game.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "3d",
+      "multiplayer": false,
+      "players": {
+        "min": 1,
+        "max": 1
+      },
+      "tags": [
+        "template",
+        "webgl"
+      ],
+      "controls": [
+        "Drag: orbit",
+        "Wheel: zoom"
+      ],
+      "featured": false,
+      "template": true
+    }
+  ]
 }

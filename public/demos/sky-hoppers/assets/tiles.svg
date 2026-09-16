@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="32" viewBox="0 0 160 32">
+
+<g id="grass"><rect width="32" height="32" fill="#6b4a2e"/><rect width="32" height="9" fill="#4fbf5a"/><rect y="9" width="32" height="3" fill="#2f8a3d"/><rect x="4" y="16" width="5" height="4" fill="#5a3d24"/><rect x="18" y="22" width="6" height="4" fill="#5a3d24"/></g>
+<g transform="translate(32 0)"><rect width="32" height="32" fill="#6b4a2e"/><rect x="6" y="6" width="6" height="4" fill="#5a3d24"/><rect x="20" y="14" width="7" height="5" fill="#5a3d24"/><rect x="10" y="24" width="5" height="4" fill="#5a3d24"/></g>
+<g transform="translate(64 0)"><rect width="32" height="32" fill="#7a839a"/><rect x="1" y="1" width="30" height="30" fill="#8f99b3"/><rect x="1" y="1" width="30" height="14" fill="#9aa5c0"/><line x1="1" y1="16" x2="31" y2="16" stroke="#6b7590" stroke-width="2"/><line x1="16" y1="1" x2="16" y2="16" stroke="#6b7590" stroke-width="2"/><line x1="8" y1="16" x2="8" y2="31" stroke="#6b7590" stroke-width="2"/><line x1="24" y1="16" x2="24" y2="31" stroke="#6b7590" stroke-width="2"/></g>
+<g transform="translate(96 0)"><rect width="32" height="32" fill="#a4703a"/><rect x="2" y="2" width="28" height="28" fill="#c58a4a"/><line x1="2" y1="2" x2="30" y2="30" stroke="#8a5a2a" stroke-width="3"/><line x1="30" y1="2" x2="2" y2="30" stroke="#8a5a2a" stroke-width="3"/></g>
+<g transform="translate(128 0)"><rect width="32" height="32" fill="#9fdcff"/><rect x="2" y="2" width="28" height="28" fill="#c9eeff"/><polygon points="6,26 12,8 16,26" fill="#ffffff" opacity=".6"/></g>
+</svg>

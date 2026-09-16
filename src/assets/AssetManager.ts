@@ -177,11 +177,11 @@ export class AssetManager implements AssetManagerLike {
   }
 }
 
-function loadImage(url: string): Promise<HTMLImageElement> {
+function loadImage(url: string): Promise<HTMLImageElement | HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     if (!url.startsWith('data:')) img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
+    img.onload = () => resolve(isSvgUrl(url) ? rasterize(img) : img);
     img.onerror = () => reject(new Error(`Failed to load image ${url}`));
     img.src = url;
   });
@@ -207,4 +207,24 @@ async function loadAtlas(url: string, entry: AssetManifestEntry, manager: AssetM
   const imageUrl = /^(data:|https?:|\/)/.test(imageRef) ? imageRef : url.slice(0, url.lastIndexOf('/') + 1) + imageRef;
   await manager.load('image', imageUrl, imageId);
   return { image: imageId, frames, animations };
+}
+
+function isSvgUrl(url: string): boolean {
+  return /\.svg(\?|#|$)/i.test(url) || /^data:image\/svg\+xml/i.test(url);
+}
+
+/**
+ * Rasterize a vector image once at its intrinsic size. Browsers re-render SVG
+ * images on every `drawImage` and handle source rectangles inconsistently,
+ * which breaks atlas/tileset lookups; a canvas copy behaves like a bitmap.
+ */
+function rasterize(img: HTMLImageElement): HTMLImageElement | HTMLCanvasElement {
+  if (typeof document === 'undefined' || !img.naturalWidth || !img.naturalHeight) return img;
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return img;
+  ctx.drawImage(img, 0, 0);
+  return canvas;
 }

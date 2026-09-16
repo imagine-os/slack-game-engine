@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0d18"/><stop offset="1" stop-color="#1a2140"/></linearGradient></defs>
+<rect width="320" height="180" fill="url(#bg)"/>
+
+<circle cx="40" cy="30" r="1.5" fill="#fff" opacity=".7"/><circle cx="280" cy="50" r="1" fill="#fff" opacity=".6"/><circle cx="120" cy="150" r="1.2" fill="#fff" opacity=".5"/><circle cx="220" cy="120" r="1.8" fill="#fff" opacity=".8"/><circle cx="70" cy="110" r="1" fill="#fff" opacity=".6"/>
+<polygon points="80,60 60,110 80,100 100,110" fill="#4cc2ff" transform="rotate(-30 80 85)"/>
+<polygon points="240,110 220,160 240,150 260,160" fill="#ff7a3d" transform="rotate(150 240 135)"/>
+<polygon points="150,40 185,30 205,60 195,95 160,100 135,70" fill="#8a8580" stroke="#2a2825" stroke-width="3"/>
+<circle cx="120" cy="75" r="3" fill="#ffd166"/><circle cx="135" cy="70" r="3" fill="#ffd166"/>
+<text x="160" y="168" fill="#fff" font-family="system-ui,sans-serif" font-size="16" text-anchor="middle" font-weight="700">Arena Blasters</text>
+</svg>

@@ -1,25 +1,32 @@
 # Bundled demo projects
 
-Owned by the demos worker. Each demo lives in `public/demos/<id>/project.json`
-(a Forge `Project` document) with its assets next to it, and is listed in
-`index.json`:
+Generated from `demos/src/**` by `npm run build:demos`; do not edit by hand
+(tests fail when the output is stale). Each demo lives in `<id>/project.json`
+(a Forge `Project` document) with its assets, a `thumbnail.svg` and a
+`README.md` next to it, and is listed in `index.json`:
 
 ```json
 {
   "demos": [
     {
-      "id": "platformer",
-      "title": "Platformer",
-      "description": "Run and jump through a tile-based level.",
-      "thumbnail": "thumb.png",
+      "id": "arena-blasters",
+      "name": "Arena Blasters",
+      "title": "Arena Blasters",
+      "description": "Top-down arena shooter for 1-8 players ...",
+      "thumbnail": "thumbnail.svg",
       "renderer": "2d",
       "multiplayer": true,
-      "players": "2-4",
-      "tags": ["physics", "tilemap"]
+      "players": { "min": 1, "max": 8 },
+      "tags": ["shooter", "physics"],
+      "controls": ["A/D: turn", "W: thrust", "J / click: fire"],
+      "featured": true,
+      "template": false
     }
   ]
 }
 ```
 
-`thumbnail` is relative to the demo folder. The launcher opens
-`play.html?project=<id>` and `editor.html?project=<id>`.
+`thumbnail` is relative to the demo folder. `title` duplicates `name` for
+older launcher builds; `players` may also be a string such as `"2-4"`.
+`template: true` marks the starter projects that "New project" copies. The
+launcher opens `play.html?project=<id>` and `editor.html?project=<id>`.

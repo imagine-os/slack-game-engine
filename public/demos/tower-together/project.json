@@ -1,0 +1,4243 @@
+{
+  "id": "tower-together",
+  "name": "Tower Together",
+  "version": 1,
+  "projectVersion": "0.1.0",
+  "description": "Co-op tower defence for 1-4 players: click or tap to build turrets along the road, share one purse of gold and hold the base through escalating waves.",
+  "author": "Forge Engine demos",
+  "thumbnail": "thumbnail.svg",
+  "createdAt": "2026-09-16T00:00:00.000Z",
+  "updatedAt": "2026-09-16T00:00:00.000Z",
+  "scenes": [
+    {
+      "version": 1,
+      "name": "Valley",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Camera"
+              }
+            },
+            {
+              "type": "Camera2D",
+              "data": {
+                "zoom": 1,
+                "active": true,
+                "priority": 0,
+                "follow": 0,
+                "followSmoothing": 8,
+                "followOffset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "bounds": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 0,
+                  "height": 0
+                },
+                "backgroundColor": {
+                  "r": 0.08627450980392157,
+                  "g": 0.12941176470588237,
+                  "b": 0.16862745098039217,
+                  "a": 1
+                },
+                "ambientLight": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "pixelPerfect": false,
+                "shakeDecay": 8
+              }
+            },
+            {
+              "type": "AudioListener",
+              "data": {
+                "enabled": true
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "MapCamera",
+                "props": {
+                  "width": 37,
+                  "height": 19
+                },
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Camera"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "GameManager"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "GameManager",
+                "props": {
+                  "startGold": 120,
+                  "towerCost": 50,
+                  "baseHealth": 20,
+                  "waveDelay": 5,
+                  "mapWidth": 36,
+                  "mapHeight": 18,
+                  "path": [
+                    [
+                      -16,
+                      6
+                    ],
+                    [
+                      -8,
+                      6
+                    ],
+                    [
+                      -8,
+                      -4
+                    ],
+                    [
+                      2,
+                      -4
+                    ],
+                    [
+                      2,
+                      5
+                    ],
+                    [
+                      10,
+                      5
+                    ],
+                    [
+                      10,
+                      -3
+                    ],
+                    [
+                      16.5,
+                      -3
+                    ]
+                  ]
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "",
+                "sharedWith": [],
+                "replicate": false,
+                "syncComponents": []
+              }
+            }
+          ],
+          "name": "GameManager"
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Map"
+              }
+            }
+          ],
+          "name": "Map"
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 36,
+                "height": 18,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.1843137254901961,
+                  "g": 0.36470588235294116,
+                  "b": 0.22745098039215686,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -30,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass",
+          "parent": 3
+        },
+        {
+          "id": 5,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0.39395965402945876,
+                  "y": 0.47914253175258636,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 1"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.46284149744315073,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 1",
+          "parent": 3
+        },
+        {
+          "id": 6,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 3.065359623171389,
+                  "y": 5.61242713779211,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 2"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.43830780410207804,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 2",
+          "parent": 3
+        },
+        {
+          "id": 7,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -14.279110512696207,
+                  "y": 0.4880881868302822,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 3"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.4627078043296933,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 3",
+          "parent": 3
+        },
+        {
+          "id": 8,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -1.688953717239201,
+                  "y": -0.3193204812705517,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 4"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5452322352211922,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 4",
+          "parent": 3
+        },
+        {
+          "id": 9,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -2.7208244712091982,
+                  "y": 2.7233214266598225,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 5"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.48853500549448653,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 5",
+          "parent": 3
+        },
+        {
+          "id": 10,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -11.532320111058652,
+                  "y": -5.143766827881336,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 6"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.3466372266178951,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 6",
+          "parent": 3
+        },
+        {
+          "id": 11,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -3.5388020742684603,
+                  "y": -1.9685875587165356,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 7"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.45387817871524017,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 7",
+          "parent": 3
+        },
+        {
+          "id": 12,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -12.66563079180196,
+                  "y": 1.5533113442361355,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 8"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.45178856265265493,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 8",
+          "parent": 3
+        },
+        {
+          "id": 13,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -2.7738177021965384,
+                  "y": 5.508005954325199,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 9"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.531884684425313,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 9",
+          "parent": 3
+        },
+        {
+          "id": 14,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 9.139353391714394,
+                  "y": -2.9182262122631073,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 10"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.4680876309983432,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 10",
+          "parent": 3
+        },
+        {
+          "id": 15,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -8.442907580640167,
+                  "y": -7.10026340931654,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 11"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5093186498386786,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 11",
+          "parent": 3
+        },
+        {
+          "id": 16,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 16.24077492346987,
+                  "y": -3.2506104931235313,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 12"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.30128668741090225,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 12",
+          "parent": 3
+        },
+        {
+          "id": 17,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 8.280749310739338,
+                  "y": -2.444574411958456,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 13"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.4437060835305601,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 13",
+          "parent": 3
+        },
+        {
+          "id": 18,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 2.6068425811827183,
+                  "y": 5.5280855521559715,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 14"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.30012642735382544,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 14",
+          "parent": 3
+        },
+        {
+          "id": 19,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 11.890041845850646,
+                  "y": 5.124592576175928,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 15"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.38464796196203677,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 15",
+          "parent": 3
+        },
+        {
+          "id": 20,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -16.135839192196727,
+                  "y": -6.772474940866232,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 16"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5444588469224982,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 16",
+          "parent": 3
+        },
+        {
+          "id": 21,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -0.09319650661200285,
+                  "y": 0.4177664630115032,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 17"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.3446507752058096,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 17",
+          "parent": 3
+        },
+        {
+          "id": 22,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0.06829009391367435,
+                  "y": 3.7475356720387936,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 18"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.2811151401139796,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 18",
+          "parent": 3
+        },
+        {
+          "id": 23,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 4.899351256899536,
+                  "y": -7.278370752930641,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 19"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.4055884287692606,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 19",
+          "parent": 3
+        },
+        {
+          "id": 24,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 4.5829490828327835,
+                  "y": 7.749971825629473,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 20"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.39986685061594474,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 20",
+          "parent": 3
+        },
+        {
+          "id": 25,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -1.1501061911694705,
+                  "y": -2.35339430347085,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 21"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.26689748774515465,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 21",
+          "parent": 3
+        },
+        {
+          "id": 26,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 7.935800788458437,
+                  "y": -1.2891120612621307,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 22"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5158114861231298,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 22",
+          "parent": 3
+        },
+        {
+          "id": 27,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6.787000159732997,
+                  "y": 0.8767389878630638,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 23"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.37173864669166506,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 23",
+          "parent": 3
+        },
+        {
+          "id": 28,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 11.6416334528476,
+                  "y": -5.437228005379438,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 24"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.2915017685154453,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 24",
+          "parent": 3
+        },
+        {
+          "id": 29,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 4.427710637450218,
+                  "y": 1.9781597033143044,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 25"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.2939177709049545,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 25",
+          "parent": 3
+        },
+        {
+          "id": 30,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -4.447998413816094,
+                  "y": -1.9580957479774952,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 26"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5780564323184081,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 26",
+          "parent": 3
+        },
+        {
+          "id": 31,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 11.999059959314764,
+                  "y": 2.0783105604350567,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 27"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.3938066801289096,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 27",
+          "parent": 3
+        },
+        {
+          "id": 32,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 14.238504712004215,
+                  "y": 1.3945259936153889,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 28"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.4022006378276274,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 28",
+          "parent": 3
+        },
+        {
+          "id": 33,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6.53285516705364,
+                  "y": 0.23210444673895836,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 29"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.2530078768613748,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 29",
+          "parent": 3
+        },
+        {
+          "id": 34,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 12.944117420818657,
+                  "y": -3.1744647659361362,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 30"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.39284952763700853,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 30",
+          "parent": 3
+        },
+        {
+          "id": 35,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -12.801264743320644,
+                  "y": -6.723818749189377,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 31"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5107851705397479,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 31",
+          "parent": 3
+        },
+        {
+          "id": 36,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 1.5135831208899617,
+                  "y": 0.22538769617676735,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 32"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.28617693301057445,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 32",
+          "parent": 3
+        },
+        {
+          "id": 37,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 2.0291041103191674,
+                  "y": 1.9526347555220127,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 33"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5595428878208621,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 33",
+          "parent": 3
+        },
+        {
+          "id": 38,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 15.686525462195277,
+                  "y": 1.5710421986877918,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 34"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.461310193000827,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 34",
+          "parent": 3
+        },
+        {
+          "id": 39,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 2.488361447583884,
+                  "y": -0.20750950649380684,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 35"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.28305140676675367,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 35",
+          "parent": 3
+        },
+        {
+          "id": 40,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 5.159194297157228,
+                  "y": 2.412972830235958,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 36"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5983976829098537,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 36",
+          "parent": 3
+        },
+        {
+          "id": 41,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 7.158295898232609,
+                  "y": -5.838799513876438,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 37"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.2981280229636468,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 37",
+          "parent": 3
+        },
+        {
+          "id": 42,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 4.995543293189257,
+                  "y": 7.553393419831991,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 38"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.370217490370851,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 38",
+          "parent": 3
+        },
+        {
+          "id": 43,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 14.467529410962015,
+                  "y": -1.9756088703870773,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 39"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5162402457441203,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 39",
+          "parent": 3
+        },
+        {
+          "id": 44,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 5.2302007782272995,
+                  "y": -6.858704850077629,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grass Tuft 40"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.350331037316937,
+                "points": [],
+                "fill": {
+                  "r": 0.21176470588235294,
+                  "g": 0.40784313725490196,
+                  "b": 0.24705882352941178,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -29,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Grass Tuft 40",
+          "parent": 3
+        },
+        {
+          "id": 45,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Road Edge"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "line",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5,
+                "points": [
+                  -16,
+                  6,
+                  -8,
+                  6,
+                  -8,
+                  -4,
+                  2,
+                  -4,
+                  2,
+                  5,
+                  10,
+                  5,
+                  10,
+                  -3,
+                  16.5,
+                  -3
+                ],
+                "fill": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "filled": false,
+                "stroke": {
+                  "r": 0.4196078431372549,
+                  "g": 0.3215686274509804,
+                  "b": 0.2196078431372549,
+                  "a": 1
+                },
+                "strokeWidth": 2.2,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -21,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Road Edge",
+          "parent": 3
+        },
+        {
+          "id": 46,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Road"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "line",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5,
+                "points": [
+                  -16,
+                  6,
+                  -8,
+                  6,
+                  -8,
+                  -4,
+                  2,
+                  -4,
+                  2,
+                  5,
+                  10,
+                  5,
+                  10,
+                  -3,
+                  16.5,
+                  -3
+                ],
+                "fill": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "filled": false,
+                "stroke": {
+                  "r": 0.6901960784313725,
+                  "g": 0.5411764705882353,
+                  "b": 0.35294117647058826,
+                  "a": 1
+                },
+                "strokeWidth": 1.8,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -20,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Road",
+          "parent": 3
+        },
+        {
+          "id": 47,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -16,
+                  "y": 6,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Portal"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 1.1,
+                "points": [],
+                "fill": {
+                  "r": 0.35294117647058826,
+                  "g": 0.17647058823529413,
+                  "b": 0.5098039215686274,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0.7254901960784313,
+                  "g": 0.5490196078431373,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeWidth": 0.12,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -10,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "ParticleEmitter",
+              "data": {
+                "emitting": true,
+                "rate": 12,
+                "maxParticles": 40,
+                "lifetime": 1.2,
+                "lifetimeVariation": 0.3,
+                "speed": 0.6,
+                "speedVariation": 1,
+                "angle": 1.5707963267948966,
+                "spread": 3.141592653589793,
+                "gravity": {
+                  "x": 0,
+                  "y": 0.4
+                },
+                "areaSize": {
+                  "x": 0,
+                  "y": 0
+                },
+                "startSize": 0.25,
+                "endSize": 0,
+                "sizeVariation": 0.1,
+                "startColor": {
+                  "r": 0.7254901960784313,
+                  "g": 0.5490196078431373,
+                  "b": 1,
+                  "a": 0.8
+                },
+                "endColor": {
+                  "r": 0.7254901960784313,
+                  "g": 0.5490196078431373,
+                  "b": 1,
+                  "a": 0
+                },
+                "texture": "",
+                "blend": "add",
+                "spin": 0,
+                "drag": 0,
+                "worldSpace": true,
+                "layer": -9,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Portal",
+          "parent": 3
+        },
+        {
+          "id": 48,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 16.5,
+                  "y": -3,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Base"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 2,
+                "height": 2,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.24705882352941178,
+                  "g": 0.29411764705882354,
+                  "b": 0.47058823529411764,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0.788235294117647,
+                  "g": 0.8274509803921568,
+                  "b": 0.9019607843137255,
+                  "a": 1
+                },
+                "strokeWidth": 0.12,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -10,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Base",
+          "parent": 3
+        },
+        {
+          "id": 49,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 16.5,
+                  "y": -1.5,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Base Label"
+              }
+            },
+            {
+              "type": "Text",
+              "data": {
+                "text": "BASE",
+                "size": 0.5,
+                "font": "system-ui, sans-serif",
+                "bold": true,
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "align": "center",
+                "baseline": "middle",
+                "outline": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "outlineWidth": 0.04,
+                "maxWidth": 0,
+                "alpha": 1,
+                "layer": 10,
+                "order": 0,
+                "visible": true,
+                "screenSpace": false
+              }
+            }
+          ],
+          "name": "Base Label",
+          "parent": 3
+        }
+      ],
+      "settings": {
+        "gravity": {
+          "x": 0,
+          "y": 0
+        },
+        "seed": 5
+      }
+    }
+  ],
+  "startScene": "Valley",
+  "scripts": [
+    {
+      "name": "Builder",
+      "source": "// One player's build cursor. Follows the pointer from the input snapshot\n// (works for remote peers too), snaps to the grid, shows whether the spot is\n// valid and asks the GameManager to place a tower on \"fire\".\nfunction distToPath(path, x, y) {\n  let best = Infinity;\n  for (let i = 0; i < path.length - 1; i++) {\n    const ax = path[i][0], ay = path[i][1], bx = path[i + 1][0], by = path[i + 1][1];\n    const dx = bx - ax, dy = by - ay;\n    const len2 = dx * dx + dy * dy || 1;\n    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));\n    best = Math.min(best, Math.hypot(x - (ax + dx * t), y - (ay + dy * t)));\n  }\n  return best;\n}\n\ndefineScript({\n  name: 'Builder',\n  description: 'Per-player tower placement cursor.',\n  props: {\n    color: { type: 'string', default: '#4cc2ff', label: 'Colour (hex)' },\n    label: { type: 'string', default: 'P1' },\n    cost: { type: 'integer', default: 50 },\n  },\n  onStart(ctx) {\n    ctx.state.gold = 0;\n    ctx.state.valid = false;\n    const plate = ctx.world.getChildren(ctx.entity)[0];\n    const text = plate !== undefined ? ctx.getOn(plate, 'Text') : null;\n    if (text) { text.text = ctx.props.label; text.color.setHex(ctx.props.color); }\n    ctx.send('queryGold', {});\n  },\n  onMessage(ctx, name, data) {\n    if (name === 'goldChanged') ctx.state.gold = data.gold;\n  },\n  isLocal(ctx) {\n    const pi = ctx.playerInput;\n    return !!pi && (pi.owner === 'local' || pi.owner === ctx.net.localId);\n  },\n  /** Snap a world position to the build grid (1-unit cells centred on .5). */\n  place(ctx, x, y) {\n    const gx = Math.floor(x) + 0.5, gy = Math.floor(y) + 0.5;\n    ctx.transform.setPosition(gx, gy);\n    const gm = ctx.find('GameManager');\n    const p = gm !== undefined ? ctx.getOn(gm, 'Script').props : null;\n    let valid = !!p && Math.abs(gx) <= p.mapWidth / 2 - 0.5 && Math.abs(gy) <= p.mapHeight / 2 - 0.5 && distToPath(p.path, gx, gy) >= p.pathClearance;\n    if (valid) for (const t of ctx.findAll('tower')) { const tt = ctx.getOn(t, 'Transform'); if (Math.abs(tt.x - gx) < 0.9 && Math.abs(tt.y - gy) < 0.9) { valid = false; break; } }\n    ctx.state.valid = valid;\n    const shape = ctx.get('Shape');\n    if (shape) shape.stroke.setHex(!valid ? '#ef476f' : ctx.state.gold >= ctx.props.cost ? ctx.props.color : '#ffd166');\n  },\n  build(ctx) {\n    if (ctx.state.valid) ctx.send('placeTower', { x: ctx.transform.x, y: ctx.transform.y, by: ctx.net.owner() });\n  },\n  onOwnerInput(ctx, snap) {\n    if (snap.pointer) this.place(ctx, snap.pointer.x, snap.pointer.y);\n    if (snap.pressed.includes('fire')) this.build(ctx);\n  },\n  onUpdate(ctx) {\n    // Touch fallback for the local player: a tap aims and builds in one go\n    // (a quick tap starts and ends between frames, so use the tap counter).\n    if (!this.isLocal(ctx)) return;\n    const touch = ctx.input.touch;\n    if (touch.taps > 0) {\n      const w = ctx.engine.screenToWorld(touch.lastPosition.x, touch.lastPosition.y);\n      this.place(ctx, w.x, w.y);\n      this.build(ctx);\n    } else if (touch.touches.length > 0) {\n      const p = touch.touches[0].position;\n      const w = ctx.engine.screenToWorld(p.x, p.y);\n      this.place(ctx, w.x, w.y);\n    }\n  },\n});\n"
+    },
+    {
+      "name": "Enemy",
+      "source": "// Walks the road defined by the GameManager's `path`; damaged by Shots.\ndefineScript({\n  name: 'Enemy',\n  description: 'Path-following creep with a health bar.',\n  props: {\n    speed: { type: 'number', default: 1.6, min: 0.1, max: 20 },\n    hp: { type: 'integer', default: 3, min: 1 },\n    reward: { type: 'integer', default: 8, min: 0 },\n    big: { type: 'boolean', default: false },\n  },\n  onStart(ctx) {\n    const s = ctx.state;\n    s.hp = ctx.props.hp;\n    s.maxHp = ctx.props.hp;\n    s.index = 1;\n    s.dead = false;\n    const gm = ctx.find('GameManager');\n    s.path = gm !== undefined ? ctx.getOn(gm, 'Script').props.path : [[0, 0]];\n    if (ctx.props.big) { const shape = ctx.get('Shape'); if (shape) { shape.radius = 0.55; shape.fill.setHex('#b23a5a'); } }\n  },\n  onFixedUpdate(ctx, dt) {\n    const s = ctx.state;\n    if (s.dead || s.index >= s.path.length) return;\n    const t = ctx.transform;\n    const [tx, ty] = s.path[s.index];\n    const dx = tx - t.x, dy = ty - t.y;\n    const d = Math.hypot(dx, dy);\n    const step = ctx.props.speed * dt;\n    if (d <= step) {\n      t.setPosition(tx, ty);\n      s.index++;\n      if (s.index >= s.path.length && ctx.net.isHost) { s.dead = true; ctx.send('enemyReachedBase', {}); this.remove(ctx); }\n    } else t.setPosition(t.x + (dx / d) * step, t.y + (dy / d) * step);\n    // Wobble while walking.\n    const shape = ctx.get('Shape');\n    if (shape) shape.height = shape.width = 1 + Math.sin(ctx.time.elapsed * 12) * 0.06;\n  },\n  onMessage(ctx, name, data) {\n    if (name !== 'damage' || ctx.state.dead || !ctx.net.isHost) return;\n    ctx.state.hp -= data.amount;\n    for (const child of ctx.world.getChildren(ctx.entity)) {\n      if (ctx.nameOf(child) !== 'Health') continue;\n      const bar = ctx.getOn(child, 'Shape');\n      bar.width = 0.8 * Math.max(0, ctx.state.hp / ctx.state.maxHp);\n      bar.fill.setHex(ctx.state.hp / ctx.state.maxHp > 0.5 ? '#06d6a0' : '#ffd166');\n    }\n    if (ctx.state.hp > 0) return;\n    ctx.state.dead = true;\n    ctx.audio.play('hit', { volume: 0.35, pitchVariation: 0.2 });\n    const em = ctx.get('ParticleEmitter');\n    if (em) em.burst(ctx.props.big ? 30 : 14);\n    const shape = ctx.get('Shape');\n    if (shape) shape.visible = false;\n    for (const child of ctx.world.getChildren(ctx.entity)) { const cs = ctx.getOn(child, 'Shape'); if (cs) cs.visible = false; }\n    ctx.send('enemyKilled', { reward: ctx.props.reward });\n    ctx.timer(0.5, () => this.remove(ctx));\n  },\n  remove(ctx) {\n    const sync = ctx.net.hub.sync;\n    if (sync && ctx.net.isHost) sync.despawn(ctx.entity); else ctx.destroy();\n  },\n});\n"
+    },
+    {
+      "name": "GameManager",
+      "source": "// Shared tower-defence state: gold, base health, waves, tower placement.\n// Every player gets a Builder cursor; placement requests arrive as messages\n// and are validated here on the host, so the whole team spends one purse.\nfunction hud(ctx) { return ctx.engine.canvas ? ctx.engine.hud : null; }\n\nconst COLORS = ['#4cc2ff', '#ff7a3d', '#8b7dff', '#06d6a0'];\n\nfunction distToPath(path, x, y) {\n  let best = Infinity;\n  for (let i = 0; i < path.length - 1; i++) {\n    const ax = path[i][0], ay = path[i][1], bx = path[i + 1][0], by = path[i + 1][1];\n    const dx = bx - ax, dy = by - ay;\n    const len2 = dx * dx + dy * dy || 1;\n    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));\n    best = Math.min(best, Math.hypot(x - (ax + dx * t), y - (ay + dy * t)));\n  }\n  return best;\n}\n\ndefineScript({\n  name: 'GameManager',\n  description: 'Gold, waves, base health and tower placement.',\n  props: {\n    startGold: { type: 'integer', default: 120, min: 0 },\n    towerCost: { type: 'integer', default: 50, min: 1 },\n    baseHealth: { type: 'integer', default: 20, min: 1 },\n    waveDelay: { type: 'number', default: 5, min: 0, max: 60, label: 'Seconds between waves' },\n    waveBonus: { type: 'integer', default: 25 },\n    mapWidth: { type: 'number', default: 36 },\n    mapHeight: { type: 'number', default: 18 },\n    pathClearance: { type: 'number', default: 1.1, label: 'Min distance from the road' },\n    path: { type: 'json', default: [[-16, 6], [-8, 6], [-8, -4], [2, -4], [2, 5], [10, 5], [10, -3], [16.5, -3]] },\n  },\n  onStart(ctx) {\n    const s = ctx.state;\n    s.gold = ctx.props.startGold;\n    s.base = ctx.props.baseHealth;\n    s.wave = 0;\n    s.toSpawn = 0;\n    s.over = false;\n    s.players = {};\n    s.count = 0;\n    s.unsub = [];\n    if (ctx.net.isHost) {\n      this.addPlayer(ctx, ctx.net.localId);\n      const sync = ctx.net.hub.sync;\n      if (sync) {\n        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);\n        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));\n        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));\n      }\n      s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;\n    }\n    this.drawHud(ctx);\n  },\n  onDestroy(ctx) {\n    for (const off of ctx.state.unsub) off();\n    const h = hud(ctx);\n    if (h) { h.remove('gold'); h.remove('wave'); h.remove('hint'); h.remove('over'); }\n  },\n  addPlayer(ctx, peerId) {\n    const s = ctx.state;\n    if (s.players[peerId]) return;\n    const index = s.count++;\n    const entity = ctx.net.spawn('Builder', { ownerId: peerId, position: { x: 0, y: 0 } });\n    const pi = ctx.getOn(entity, 'PlayerInput');\n    if (pi) pi.owner = peerId;\n    const ni = ctx.getOn(entity, 'NetworkIdentity');\n    if (ni) ni.ownerId = peerId;\n    const name = ctx.getOn(entity, 'Name');\n    if (name) name.name = `Builder ${peerId}`;\n    const script = ctx.getOn(entity, 'Script');\n    script.props.color = COLORS[index % COLORS.length];\n    script.props.label = `P${index + 1}`;\n    script.props.cost = ctx.props.towerCost;\n    s.players[peerId] = { entity, index };\n  },\n  removePlayer(ctx, peerId) {\n    const p = ctx.state.players[peerId];\n    if (!p) return;\n    if (ctx.world.isAlive(p.entity)) {\n      const sync = ctx.net.hub.sync;\n      if (sync) sync.despawn(p.entity); else ctx.destroy(p.entity);\n    }\n    delete ctx.state.players[peerId];\n  },\n\n  canPlace(ctx, x, y) {\n    const hw = ctx.props.mapWidth / 2, hh = ctx.props.mapHeight / 2;\n    if (Math.abs(x) > hw - 0.5 || Math.abs(y) > hh - 0.5) return false;\n    if (distToPath(ctx.props.path, x, y) < ctx.props.pathClearance) return false;\n    for (const t of ctx.findAll('tower')) {\n      const tt = ctx.getOn(t, 'Transform');\n      if (Math.abs(tt.x - x) < 0.9 && Math.abs(tt.y - y) < 0.9) return false;\n    }\n    return true;\n  },\n  onMessage(ctx, name, data) {\n    const s = ctx.state;\n    if (name === 'queryGold') { ctx.send('goldChanged', { gold: s.gold }); return; }\n    if (!ctx.net.isHost || s.over) return;\n    if (name === 'placeTower') {\n      if (s.gold < ctx.props.towerCost || !this.canPlace(ctx, data.x, data.y)) { ctx.audio.play('deny', { volume: 0.4 }); return; }\n      s.gold -= ctx.props.towerCost;\n      const tower = ctx.net.spawn('Tower', { position: { x: data.x, y: data.y } });\n      ctx.getOn(tower, 'Script').props.builtBy = data.by || '';\n      ctx.audio.play('place', { volume: 0.6 });\n      ctx.send('goldChanged', { gold: s.gold });\n    } else if (name === 'enemyKilled') {\n      s.gold += data.reward || 0;\n      ctx.send('goldChanged', { gold: s.gold });\n    } else if (name === 'enemyReachedBase') {\n      s.base--;\n      ctx.audio.play('lose', { volume: 0.7 });\n      const cam = ctx.find('Camera');\n      const c = cam !== undefined ? ctx.getOn(cam, 'Camera2D') : null;\n      if (c) c.shake = 0.3;\n      if (s.base <= 0) this.gameOver(ctx);\n    }\n    this.drawHud(ctx);\n  },\n  onUpdate(ctx) {\n    const s = ctx.state;\n    if (!ctx.net.isHost || s.over) return;\n    if (s.nextWaveAt !== undefined && ctx.time.elapsed >= s.nextWaveAt) { s.nextWaveAt = undefined; this.startWave(ctx); }\n    if (s.nextWaveAt === undefined && s.toSpawn === 0 && s.wave > 0 && ctx.findAll('enemy').length === 0 && !s.cleared) {\n      s.cleared = true;\n      s.gold += ctx.props.waveBonus;\n      ctx.audio.play('clear', { volume: 0.6 });\n      ctx.send('goldChanged', { gold: s.gold });\n      s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;\n    }\n    if (ctx.time.frame % 10 === 0) this.drawHud(ctx);\n  },\n  startWave(ctx) {\n    const s = ctx.state;\n    s.wave++;\n    s.cleared = false;\n    s.toSpawn = 4 + s.wave * 2;\n    const hp = 2 + Math.floor(s.wave * 1.3);\n    const speed = 1.6 + s.wave * 0.1;\n    const start = ctx.props.path[0];\n    const spawnOne = () => {\n      if (s.over || s.toSpawn <= 0) return;\n      s.toSpawn--;\n      const e = ctx.net.spawn('Enemy', { position: { x: start[0], y: start[1] } });\n      const sc = ctx.getOn(e, 'Script');\n      sc.props.hp = hp;\n      sc.props.speed = speed;\n      sc.props.reward = 6 + s.wave;\n      if (s.wave % 3 === 0 && s.toSpawn % 4 === 0) { sc.props.hp = hp * 3; sc.props.speed = speed * 0.7; sc.props.reward *= 3; sc.props.big = true; }\n      if (s.toSpawn > 0) ctx.timer(Math.max(0.35, 0.9 - s.wave * 0.05), spawnOne);\n    };\n    spawnOne();\n    this.drawHud(ctx);\n  },\n  gameOver(ctx) {\n    const s = ctx.state;\n    s.over = true;\n    const h = hud(ctx);\n    if (h) h.panel('over', 'The base has fallen', `You survived ${s.wave - 1} wave${s.wave - 1 === 1 ? '' : 's'}.\\nRestarting in 6s`);\n    ctx.timer(6, () => this.restart(ctx));\n  },\n  restart(ctx) {\n    const s = ctx.state;\n    const sync = ctx.net.hub.sync;\n    for (const e of [...ctx.findAll('enemy'), ...ctx.findAll('tower'), ...ctx.findAll('shot')]) { if (sync) sync.despawn(e); else ctx.destroy(e); }\n    s.gold = ctx.props.startGold;\n    s.base = ctx.props.baseHealth;\n    s.wave = 0;\n    s.toSpawn = 0;\n    s.over = false;\n    s.cleared = false;\n    s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;\n    ctx.send('goldChanged', { gold: s.gold });\n    const h = hud(ctx);\n    if (h) h.remove('over');\n    this.drawHud(ctx);\n  },\n  drawHud(ctx) {\n    const h = hud(ctx);\n    if (!h) return;\n    const s = ctx.state;\n    h.text('gold', `Gold ${s.gold}   Base ${s.base}/${ctx.props.baseHealth}`, { anchor: 'top-left' }).style.fontSize = '18px';\n    const next = s.nextWaveAt !== undefined ? `next wave in ${Math.max(0, Math.ceil(s.nextWaveAt - ctx.time.elapsed))}s` : `${ctx.findAll('enemy').length + s.toSpawn} enemies`;\n    h.text('wave', `Wave ${s.wave}   ${next}`, { anchor: 'top-right', y: 48 });\n    h.text('hint', `Click / tap to build a tower (${ctx.props.towerCost} gold, shared) · not on the road`, { anchor: 'bottom-right' });\n  },\n});\n"
+    },
+    {
+      "name": "MapCamera",
+      "source": "// Fit the whole map into the canvas.\ndefineScript({\n  name: 'MapCamera',\n  description: 'Fits the camera zoom to the map.',\n  props: { width: { type: 'number', default: 37 }, height: { type: 'number', default: 19 } },\n  onUpdate(ctx) {\n    const r = ctx.engine.renderer;\n    if (!r) return;\n    ctx.get('Camera2D').zoom = Math.min(r.width / (r.pixelsPerUnit * ctx.props.width), r.height / (r.pixelsPerUnit * ctx.props.height));\n  },\n});\n"
+    },
+    {
+      "name": "Shot",
+      "source": "// Homing projectile fired by towers. Local-only decoration on clients: the\n// host decides damage.\ndefineScript({\n  name: 'Shot',\n  description: 'Homes in on its target and applies damage.',\n  props: {\n    speed: { type: 'number', default: 14, min: 1, max: 100 },\n    damage: { type: 'integer', default: 1, min: 1 },\n    target: { type: 'entity', default: 0 },\n    lifetime: { type: 'number', default: 2 },\n  },\n  onStart(ctx) { ctx.state.age = 0; },\n  onFixedUpdate(ctx, dt) {\n    ctx.state.age += dt;\n    const target = ctx.props.target;\n    if (!target || !ctx.world.isAlive(target) || ctx.state.age > ctx.props.lifetime) { ctx.destroy(); return; }\n    const t = ctx.transform;\n    const tt = ctx.getOn(target, 'Transform');\n    const dx = tt.x - t.x, dy = tt.y - t.y;\n    const d = Math.hypot(dx, dy);\n    const step = ctx.props.speed * dt;\n    if (d <= Math.max(step, 0.3)) {\n      ctx.sendTo(target, 'damage', { amount: ctx.props.damage });\n      ctx.destroy();\n      return;\n    }\n    t.setPosition(t.x + (dx / d) * step, t.y + (dy / d) * step);\n  },\n});\n"
+    },
+    {
+      "name": "Tower",
+      "source": "// Turret: aims at the nearest enemy in range and fires Shot prefabs.\ndefineScript({\n  name: 'Tower',\n  description: 'Auto-targeting turret.',\n  props: {\n    range: { type: 'number', default: 3.6, min: 0.5, max: 20 },\n    fireInterval: { type: 'number', default: 0.65, min: 0.05, max: 5 },\n    damage: { type: 'integer', default: 1, min: 1 },\n    builtBy: { type: 'string', default: '' },\n  },\n  onStart(ctx) {\n    ctx.state.cooldown = 0.3;\n    for (const child of ctx.world.getChildren(ctx.entity)) {\n      if (ctx.nameOf(child) === 'Range') { const s = ctx.getOn(child, 'Shape'); if (s) s.radius = ctx.props.range; }\n    }\n    const em = ctx.get('ParticleEmitter');\n    if (em) em.burst(12);\n  },\n  onFixedUpdate(ctx, dt) {\n    const s = ctx.state;\n    s.cooldown -= dt;\n    const t = ctx.transform;\n    let best, bestD = ctx.props.range;\n    for (const e of ctx.findAll('enemy')) {\n      const et = ctx.getOn(e, 'Transform');\n      const d = Math.hypot(et.x - t.x, et.y - t.y);\n      if (d < bestD) { bestD = d; best = e; }\n    }\n    if (best === undefined) return;\n    const et = ctx.getOn(best, 'Transform');\n    const barrel = ctx.world.getChildren(ctx.entity).find((c) => ctx.nameOf(c) === 'Barrel');\n    if (barrel !== undefined) ctx.getOn(barrel, 'Transform').angle = Math.atan2(et.y - t.y, et.x - t.x) - Math.PI / 2;\n    if (s.cooldown > 0 || !ctx.net.isHost) return;\n    s.cooldown = ctx.props.fireInterval;\n    const shot = ctx.spawn('Shot', { position: { x: t.x, y: t.y + 0.3 } });\n    const sp = ctx.getOn(shot, 'Script').props;\n    sp.target = best;\n    sp.damage = ctx.props.damage;\n    ctx.audio.play('shoot', { volume: 0.25, pitchVariation: 0.1 });\n  },\n});\n"
+    }
+  ],
+  "prefabs": [
+    {
+      "version": 1,
+      "name": "Builder",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Builder"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 1,
+                "height": 1,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "filled": false,
+                "stroke": {
+                  "r": 0.2980392156862745,
+                  "g": 0.7607843137254902,
+                  "b": 1,
+                  "a": 1
+                },
+                "strokeWidth": 0.1,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 20,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "PlayerInput",
+              "data": {
+                "owner": "local",
+                "coOwners": [],
+                "mergeStrategy": "first-wins"
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "Builder",
+                "sharedWith": [],
+                "replicate": true,
+                "syncComponents": []
+              }
+            },
+            {
+              "type": "NetTransform",
+              "data": {
+                "syncPosition": true,
+                "syncRotation": false,
+                "syncScale": false,
+                "interpolationDelay": 1,
+                "extrapolation": 0.1,
+                "positionThreshold": 0.001,
+                "rotationThreshold": 0.001,
+                "teleportDistance": 5
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Builder",
+                "props": {},
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "builder"
+                ]
+              }
+            }
+          ],
+          "name": "Builder"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.8,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Nameplate"
+              }
+            },
+            {
+              "type": "Text",
+              "data": {
+                "text": "P1",
+                "size": 0.35,
+                "font": "system-ui, sans-serif",
+                "bold": true,
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "align": "center",
+                "baseline": "middle",
+                "outline": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "outlineWidth": 0.04,
+                "maxWidth": 0,
+                "alpha": 1,
+                "layer": 21,
+                "order": 0,
+                "visible": true,
+                "screenSpace": false
+              }
+            }
+          ],
+          "name": "Nameplate",
+          "parent": 1
+        }
+      ]
+    },
+    {
+      "version": 1,
+      "name": "Tower",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Tower"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 0.85,
+                "height": 0.85,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.5607843137254902,
+                  "g": 0.6,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0.22745098039215686,
+                  "g": 0.26666666666666666,
+                  "b": 0.3764705882352941,
+                  "a": 1
+                },
+                "strokeWidth": 0.08,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 5,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "ParticleEmitter",
+              "data": {
+                "emitting": false,
+                "rate": 0,
+                "maxParticles": 20,
+                "lifetime": 0.5,
+                "lifetimeVariation": 0.3,
+                "speed": 2,
+                "speedVariation": 1,
+                "angle": 1.5707963267948966,
+                "spread": 3.141592653589793,
+                "gravity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "areaSize": {
+                  "x": 0,
+                  "y": 0
+                },
+                "startSize": 0.2,
+                "endSize": 0,
+                "sizeVariation": 0.1,
+                "startColor": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 0.8
+                },
+                "endColor": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 0
+                },
+                "texture": "",
+                "blend": "add",
+                "spin": 0,
+                "drag": 0,
+                "worldSpace": true,
+                "layer": 6,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "Tower",
+                "sharedWith": [],
+                "replicate": true,
+                "syncComponents": []
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Tower",
+                "props": {},
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "tower"
+                ]
+              }
+            }
+          ],
+          "name": "Tower"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Range"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 3.6,
+                "points": [],
+                "fill": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "filled": false,
+                "stroke": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 0.12
+                },
+                "strokeWidth": 0.04,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 4,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Range",
+          "parent": 1
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Barrel"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 0.22,
+                "height": 0.7,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.22745098039215686,
+                  "g": 0.26666666666666666,
+                  "b": 0.3764705882352941,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 7,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Barrel",
+          "parent": 1
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Turret"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.28,
+                "points": [],
+                "fill": {
+                  "r": 0.788235294117647,
+                  "g": 0.8274509803921568,
+                  "b": 0.9019607843137255,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 8,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Turret",
+          "parent": 1
+        }
+      ]
+    },
+    {
+      "version": 1,
+      "name": "Enemy",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Enemy"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.38,
+                "points": [],
+                "fill": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0.2901960784313726,
+                  "g": 0.06274509803921569,
+                  "b": 0.12549019607843137,
+                  "a": 1
+                },
+                "strokeWidth": 0.06,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 10,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "ParticleEmitter",
+              "data": {
+                "emitting": false,
+                "rate": 0,
+                "maxParticles": 40,
+                "lifetime": 0.5,
+                "lifetimeVariation": 0.3,
+                "speed": 3,
+                "speedVariation": 1,
+                "angle": 1.5707963267948966,
+                "spread": 3.141592653589793,
+                "gravity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "areaSize": {
+                  "x": 0,
+                  "y": 0
+                },
+                "startSize": 0.2,
+                "endSize": 0,
+                "sizeVariation": 0.1,
+                "startColor": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "endColor": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 0
+                },
+                "texture": "",
+                "blend": "add",
+                "spin": 0,
+                "drag": 0,
+                "worldSpace": true,
+                "layer": 11,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "Enemy",
+                "sharedWith": [],
+                "replicate": true,
+                "syncComponents": []
+              }
+            },
+            {
+              "type": "NetTransform",
+              "data": {
+                "syncPosition": true,
+                "syncRotation": false,
+                "syncScale": false,
+                "interpolationDelay": 2,
+                "extrapolation": 0.1,
+                "positionThreshold": 0.001,
+                "rotationThreshold": 0.001,
+                "teleportDistance": 5
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Enemy",
+                "props": {},
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "enemy"
+                ]
+              }
+            }
+          ],
+          "name": "Enemy"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.6,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Health Back"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 0.8,
+                "height": 0.12,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 0.6
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 11,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Health Back",
+          "parent": 1
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.6,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Health"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 0.8,
+                "height": 0.12,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.023529411764705882,
+                  "g": 0.8392156862745098,
+                  "b": 0.6274509803921569,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 12,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Health",
+          "parent": 1
+        }
+      ]
+    },
+    {
+      "version": 1,
+      "name": "Shot",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Shot"
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "circle",
+                "width": 1,
+                "height": 1,
+                "radius": 0.12,
+                "points": [],
+                "fill": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 15,
+                "order": 0,
+                "visible": true
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Shot",
+                "props": {},
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "shot"
+                ]
+              }
+            }
+          ],
+          "name": "Shot"
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "assets": [
+      {
+        "id": "place",
+        "kind": "audio",
+        "url": "assets/place.wav"
+      },
+      {
+        "id": "shoot",
+        "kind": "audio",
+        "url": "assets/shoot.wav"
+      },
+      {
+        "id": "hit",
+        "kind": "audio",
+        "url": "assets/hit.wav"
+      },
+      {
+        "id": "lose",
+        "kind": "audio",
+        "url": "assets/lose.wav"
+      },
+      {
+        "id": "clear",
+        "kind": "audio",
+        "url": "assets/clear.wav"
+      },
+      {
+        "id": "deny",
+        "kind": "audio",
+        "url": "assets/deny.wav"
+      }
+    ]
+  },
+  "settings": {
+    "renderer": "2d",
+    "pixelsPerUnit": 32,
+    "pixelPerfect": false,
+    "fixedRate": 60,
+    "viewport": {
+      "width": 960,
+      "height": 540
+    },
+    "physics": {
+      "gravity": {
+        "x": 0,
+        "y": 0
+      },
+      "gravity3d": {
+        "x": 0,
+        "y": -20,
+        "z": 0
+      }
+    },
+    "network": {
+      "mode": "host-authoritative",
+      "maxPlayers": 4,
+      "tickRate": 15
+    },
+    "multiUser": {
+      "sharedControl": true,
+      "mergeStrategy": "first-wins"
+    },
+    "input": {
+      "actions": {
+        "jump": [
+          "Space",
+          "KeyW",
+          "ArrowUp",
+          "GamepadA",
+          "Touch:jump"
+        ],
+        "fire": [
+          "MouseLeft",
+          "KeyJ",
+          "GamepadX",
+          "Touch:fire"
+        ],
+        "action": [
+          "KeyE",
+          "Enter",
+          "GamepadB",
+          "Touch:action"
+        ],
+        "pause": [
+          "Escape",
+          "GamepadStart"
+        ]
+      },
+      "axes": {
+        "moveX": {
+          "negative": [
+            "KeyA",
+            "ArrowLeft",
+            "GamepadDpadLeft"
+          ],
+          "positive": [
+            "KeyD",
+            "ArrowRight",
+            "GamepadDpadRight"
+          ],
+          "gamepadAxis": 0,
+          "touchJoystick": "x"
+        },
+        "moveY": {
+          "negative": [
+            "KeyS",
+            "ArrowDown",
+            "GamepadDpadDown"
+          ],
+          "positive": [
+            "KeyW",
+            "ArrowUp",
+            "GamepadDpadUp"
+          ],
+          "gamepadAxis": 1,
+          "invertGamepad": true,
+          "touchJoystick": "y"
+        }
+      }
+    },
+    "touchControls": false,
+    "touchButtons": []
+  }
+}

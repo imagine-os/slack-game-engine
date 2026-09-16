@@ -32,6 +32,8 @@ export class Touch {
   readonly joystick = new Vec2();
   /** True when the overlay is showing. */
   overlayVisible = false;
+  /** Canvas position of the most recent touch start/move (taps end before a frame can see them). */
+  readonly lastPosition = new Vec2();
 
   private element: HTMLElement | null = null;
   private overlay: HTMLElement | null = null;
@@ -50,6 +52,7 @@ export class Touch {
     const r = this.element!.getBoundingClientRect();
     for (const t of Array.from(ev.changedTouches)) {
       const p = new Vec2(t.clientX - r.left, t.clientY - r.top);
+      this.lastPosition.copy(p);
       this.touches.push({ id: t.identifier, position: p, start: p.clone(), delta: new Vec2(), startTime: performance.now() });
       if (this.overlayVisible && this.joystickBase && this.joystickTouchId === null && p.x < r.width / 2) {
         this.joystickTouchId = t.identifier;
@@ -70,6 +73,7 @@ export class Touch {
       const ny = t.clientY - r.top;
       tp.delta.set(nx - tp.position.x, ny - tp.position.y);
       tp.position.set(nx, ny);
+      this.lastPosition.set(nx, ny);
       if (t.identifier === this.joystickTouchId) {
         const dx = nx - this.joystickCenter.x;
         const dy = ny - this.joystickCenter.y;

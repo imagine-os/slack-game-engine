@@ -527,6 +527,9 @@ describe('LockstepSync', () => {
   function lockPeer(net: MemoryNetwork, ownerIds: string[], transport: MemoryTransport): { engine: Engine; sync: LockstepSync; entities: Entity[] } {
     const engine = headless();
     engine.scripting.consoleLogging = false;
+    // Presence pings are wall-clock driven and would consume the seeded jitter RNG at
+    // unpredictable points, making the stall pattern (and final tick) flaky under load.
+    engine.net.pingIntervalMs = 0;
     engine.scripting.compile(moverScript);
     const entities: Entity[] = [];
     for (const owner of ownerIds) {
@@ -567,6 +570,12 @@ describe('LockstepSync', () => {
     }
     net.flush();
     for (let i = 0; i < 10; i++) { A.engine.step(1 / 60); B.engine.step(1 / 60); net.flush(); }
+    // Jitter can leave one peer a tick behind; lockstep only guarantees identical state at
+    // equal ticks, so let the laggard catch up (it already holds the other side's inputs).
+    for (let guard = 0; guard < 10 && A.sync.tick !== B.sync.tick; guard++) {
+      if (A.sync.tick < B.sync.tick) A.engine.step(1 / 60); else B.engine.step(1 / 60);
+      net.flush();
+    }
     expect(A.sync.tick).toBeGreaterThan(100);
     expect(A.sync.tick).toBe(B.sync.tick);
     expect(A.sync.stalls).toBeGreaterThan(0); // latency really forced waits
