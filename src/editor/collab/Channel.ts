@@ -23,8 +23,19 @@ interface NetWithChannels {
   localId?: string;
   isHost?: boolean;
   events?: { on(event: string, fn: (payload: unknown) => void): () => void };
-  presence?: { id: string; displayName: string }[];
+  /** Roster rows; the networking layer uses `peerId`/`isLocal`, older drafts used `id`. */
+  presence?: { peerId?: string; id?: string; displayName: string; isLocal?: boolean }[];
   transport?: { peers?: readonly string[]; connected?: boolean };
+}
+
+/** Connect attempt budget per transport kind (signalling servers may hang instead of failing). */
+const CONNECT_TIMEOUT_MS = 6000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
 }
 
 /**
@@ -32,12 +43,12 @@ interface NetWithChannels {
  * `engine.net.connect` / `engine.net.channel` when present, otherwise falls
  * back to a same-browser BroadcastChannel implementation (two tabs).
  */
-export async function openChannel(engine: Engine | null, roomId: string, displayName: string, prefer: ('ws' | 'peer' | 'local')[] = ['ws', 'peer']): Promise<CollabChannel> {
+export async function openChannel(engine: Engine | null, roomId: string, displayName: string, prefer: ('ws' | 'peer' | 'local')[] = defaultTransportOrder()): Promise<CollabChannel> {
   const net = engine?.net as unknown as NetWithChannels | undefined;
   if (net && typeof net.connect === 'function' && typeof net.channel === 'function') {
     for (const kind of prefer) {
       try {
-        await net.connect(kind, { roomId, displayName });
+        await withTimeout(net.connect(kind, { roomId, displayName }), CONNECT_TIMEOUT_MS, `${kind} connect`);
         return new NetChannel(net, roomId);
       } catch (err) {
         console.warn(`[collab] ${kind} transport failed:`, err);
@@ -49,7 +60,14 @@ export async function openChannel(engine: Engine | null, roomId: string, display
   return local;
 }
 
-/** Adapter over the networking worker's channel API. */
+/** Transport order: `?net=` wins, otherwise PeerJS then same-browser tabs. */
+export function defaultTransportOrder(): ('ws' | 'peer' | 'local')[] {
+  const param = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('net') : null;
+  if (param === 'ws' || param === 'peer' || param === 'local') return [param, 'local'].filter((k, i, a) => a.indexOf(k) === i) as ('ws' | 'peer' | 'local')[];
+  return ['peer', 'local'];
+}
+
+/** Adapter over the networking layer's channel API. */
 class NetChannel implements CollabChannel {
   private ch: NonNullable<ReturnType<NonNullable<NetWithChannels['channel']>>>;
   private msgHandlers = new Set<(from: string, data: unknown) => void>();
@@ -61,13 +79,18 @@ class NetChannel implements CollabChannel {
     this.ch = net.channel!('editor-collab');
     this.off.push(this.ch.on((from, data) => { for (const h of this.msgHandlers) h(from, data); }));
     if (net.events) {
-      this.off.push(net.events.on('peer-join', (p) => { const id = peerId(p); for (const h of this.joinHandlers) h(id); }));
-      this.off.push(net.events.on('peer-leave', (p) => { const id = peerId(p); for (const h of this.leaveHandlers) h(id); }));
+      // The hub emits `peerJoined` / `peerLeft`; accept the transport-style names too.
+      for (const ev of ['peerJoined', 'peer-join']) this.off.push(net.events.on(ev, (p) => { const id = peerId(p); for (const h of this.joinHandlers) h(id); }));
+      for (const ev of ['peerLeft', 'peer-leave']) this.off.push(net.events.on(ev, (p) => { const id = peerId(p); for (const h of this.leaveHandlers) h(id); }));
     }
   }
   get localId(): string { return this.net.localId ?? 'local'; }
   get isHost(): boolean { return !!this.net.isHost; }
-  peers(): string[] { return Array.from(this.net.transport?.peers ?? this.net.presence?.map((p) => p.id).filter((id) => id !== this.localId) ?? []); }
+  peers(): string[] {
+    const fromTransport = this.net.transport?.peers;
+    if (fromTransport) return Array.from(fromTransport);
+    return (this.net.presence ?? []).filter((p) => !p.isLocal).map((p) => p.peerId ?? p.id ?? '').filter((id) => id && id !== this.localId);
+  }
   send(to: SendTarget, data: object): void { this.ch.send(to, data, { reliable: true }); }
   onMessage(fn: (from: string, data: unknown) => void): () => void { this.msgHandlers.add(fn); return () => this.msgHandlers.delete(fn); }
   onPeerJoin(fn: (id: string) => void): () => void { this.joinHandlers.add(fn); return () => this.joinHandlers.delete(fn); }

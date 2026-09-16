@@ -8,6 +8,7 @@
 import '../styles/base.css';
 import '../styles/editor.css';
 import '../styles/editor-panels.css';
+import { Engine } from '../core/Engine';
 import { createProject } from '../project/createProject';
 import { ProjectLoader } from '../project/ProjectLoader';
 import { ProjectStore } from '../project/ProjectStore';
@@ -79,7 +80,8 @@ async function main(): Promise<void> {
     // Guest joining a room without the project: fetch the state from the host before booting.
     splash(`Joining room ${room}…`);
     const name = storage.get('forge.editor.displayName', `User ${shortId(3)}`);
-    const channel = await openChannel(null, room, name);
+    // A headless engine provides `engine.net` so the real transports are used when available.
+    const channel = await openChannel(Engine.create(null, { renderer: 'none' }), room, name);
     const doc = await new Promise<Project | null>((resolve) => {
       const timer = setTimeout(() => resolve(null), 6000);
       const off = channel.onMessage((_from, data) => {
