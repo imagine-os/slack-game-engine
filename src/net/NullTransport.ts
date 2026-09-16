@@ -10,6 +10,7 @@ export class NullTransport implements Transport {
   readonly name = 'null';
   localId: PeerId = 'local';
   isHost = true;
+  readonly hostId: PeerId = 'local';
   roomId = '';
   readonly peers: PeerId[] = [];
   connected = false;
@@ -18,7 +19,7 @@ export class NullTransport implements Transport {
   async connect(opts: ConnectOptions): Promise<void> {
     this.roomId = opts.roomId;
     this.connected = true;
-    this.events.emit('connected', { localId: this.localId, isHost: true, roomId: opts.roomId, peers: [] });
+    this.events.emit('connected', { localId: this.localId, isHost: true, roomId: opts.roomId, peers: [], hostId: this.localId });
   }
 
   async disconnect(): Promise<void> {

@@ -27,6 +27,14 @@ export interface NetSyncEvents extends Record<string, unknown> {
   playerLeft: { peerId: PeerId };
   /** An RPC arrived. */
   rpc: { name: string; from: PeerId; args: unknown[]; entity?: Entity };
+  /** Sync handshake finished: the local peer is part of the game. */
+  connected: { localId: PeerId; isHost: boolean; hostId: PeerId };
+  /** Transport dropped or the sync was stopped. */
+  disconnected: { reason: string };
+  /** Host migrated. `isHost` tells whether the local peer took over. */
+  hostChanged: { hostId: PeerId; previous: PeerId; isHost: boolean };
+  /** Lockstep only: the simulation diverged from another peer. */
+  desync: { tick: number; peerId: PeerId };
 }
 
 /** RPC handler signature. */
@@ -73,8 +81,8 @@ export interface NetSync {
   rpc(name: string, args: unknown[], target?: PeerId | 'host' | 'all' | 'others', entity?: Entity): void;
 
   on<K extends keyof NetSyncEvents>(event: K, fn: (payload: NetSyncEvents[K]) => void): () => void;
-  /** Connected players including the local one. */
-  players(): { peerId: PeerId; displayName: string; isHost: boolean }[];
+  /** Connected players including the local one. `rtt` is the measured round trip in ms when known. */
+  players(): { peerId: PeerId; displayName: string; isHost: boolean; rtt?: number }[];
 }
 
 /** Default network options used when a project does not specify them. */
