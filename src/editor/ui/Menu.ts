@@ -77,6 +77,8 @@ export function showMenu(items: MenuItem[], at: { x: number; y: number } | HTMLE
     const t = e.target as Node;
     if (menu.contains(t)) return;
     if (opts.parent?.contains(t)) return;
+    // Clicks inside a nested submenu are handled by that submenu.
+    if ((t as HTMLElement).closest?.('.menu')) return;
     if (at instanceof HTMLElement && at.contains(t) && !submenu) { closeAll(); return; }
     closeAll();
   };

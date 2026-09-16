@@ -200,8 +200,7 @@ export class ScriptsPanel {
 
   create(templateId: string): void {
     const tpl = SCRIPT_TEMPLATES.find((t) => t.id === templateId) ?? SCRIPT_TEMPLATES[0];
-    const base = tpl.id === 'blank' ? 'NewScript' : tpl.label.replace(/\W+/g, '');
-    const name = this.ctx.project.uniqueScriptName(base);
+    const name = this.ctx.project.uniqueScriptName(tpl.name);
     const source = tpl.source(name);
     this.ctx.commands.push({ label: `New script ${name}`, execute: () => this.ctx.project.apply({ kind: 'script-add', name, source }), undo: () => this.ctx.project.apply({ kind: 'script-remove', name }) });
     this.open(name);

@@ -1,9 +1,9 @@
 /** Starter scripts offered by the Scripts panel. */
-export interface ScriptTemplate { id: string; label: string; description: string; source: (name: string) => string }
+export interface ScriptTemplate { id: string; label: string; /** Default script name (PascalCase). */ name: string; description: string; source: (name: string) => string }
 
 export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
   {
-    id: 'blank', label: 'Blank script', description: 'Empty defineScript with the common hooks.',
+    id: 'blank', name: 'NewScript', label: 'Blank script', description: 'Empty defineScript with the common hooks.',
     source: (name) => `defineScript({
   name: '${name}',
   props: {},
@@ -17,7 +17,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'player', label: 'Player controller', description: '2D platformer movement with jump, multiplayer-safe (uses onOwnerInput).',
+    id: 'player', name: 'PlayerController', label: 'Player controller', description: '2D platformer movement with jump, multiplayer-safe (uses onOwnerInput).',
     source: (name) => `defineScript({
   name: '${name}',
   description: 'Platformer controller. Requires RigidBody2D + a collider + PlayerInput + CharacterController2D.',
@@ -43,7 +43,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'spawner', label: 'Spawner', description: 'Spawns a prefab on a timer.',
+    id: 'spawner', name: 'Spawner', label: 'Spawner', description: 'Spawns a prefab on a timer.',
     source: (name) => `defineScript({
   name: '${name}',
   props: {
@@ -71,7 +71,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'trigger', label: 'Trigger zone', description: 'Sends a message when something enters a trigger collider.',
+    id: 'trigger', name: 'TriggerZone', label: 'Trigger zone', description: 'Sends a message when something enters a trigger collider.',
     source: (name) => `defineScript({
   name: '${name}',
   description: 'Attach to an entity with a collider marked isTrigger.',
@@ -95,7 +95,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'cameraFollow', label: 'Camera follow', description: 'Smoothly follows a target entity (2D).',
+    id: 'cameraFollow', name: 'CameraFollow', label: 'Camera follow', description: 'Smoothly follows a target entity (2D).',
     source: (name) => `defineScript({
   name: '${name}',
   props: {
@@ -117,7 +117,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'netPlayer', label: 'Net player', description: 'Top-down movement replicated across peers; reacts to ownership.',
+    id: 'netPlayer', name: 'NetPlayer', label: 'Net player', description: 'Top-down movement replicated across peers; reacts to ownership.',
     source: (name) => `defineScript({
   name: '${name}',
   description: 'Requires PlayerInput (owner = peer id) and optionally NetworkIdentity/NetTransform.',
@@ -145,7 +145,7 @@ export const SCRIPT_TEMPLATES: ScriptTemplate[] = [
 `,
   },
   {
-    id: 'gameManager', label: 'Game manager', description: 'Score, lives and restart handling via messages.',
+    id: 'gameManager', name: 'GameManager', label: 'Game manager', description: 'Score, lives and restart handling via messages.',
     source: (name) => `defineScript({
   name: '${name}',
   props: {

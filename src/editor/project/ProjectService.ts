@@ -91,7 +91,7 @@ export class ProjectService {
     this.scene.load(scene);
     this._dirty = false;
     this.onDirtyChange?.(false);
-    document.title = `${project.name} – Forge Editor`;
+    setTitle(project.name);
     this.events.emit('opened', project);
     this.events.emit('originChanged', origin);
   }
@@ -181,12 +181,13 @@ export class ProjectService {
     // Inline relative asset URLs so the copy keeps working from the local store.
     if (copy.assets.baseUrl) {
       const base = copy.assets.baseUrl;
-      for (const a of copy.assets.assets) if (!/^(data:|https?:|\/)/.test(a.url)) a.url = new URL(a.url, new URL(base, location.href)).toString();
+      const origin = typeof location !== 'undefined' ? location.href : 'http://localhost/';
+      for (const a of copy.assets.assets) if (!/^(data:|https?:|\/)/.test(a.url)) a.url = new URL(a.url, new URL(base, origin)).toString();
       delete copy.assets.baseUrl;
     }
     this.project = copy;
     this.origin = 'local';
-    document.title = `${copy.name} – Forge Editor`;
+    setTitle(copy.name);
     await this.save();
     this.events.emit('originChanged', 'local');
     this.events.emit('opened', copy);
@@ -289,7 +290,7 @@ export class ProjectService {
       case 'settings-set': {
         setPath(p as unknown as Record<string, unknown>, m.path, structuredClone(m.value));
         if (m.path === 'settings.pixelsPerUnit' && this.engine.renderer) this.engine.renderer.pixelsPerUnit = Number(m.value) || 32;
-        if (m.path === 'name') document.title = `${p.name} – Forge Editor`;
+        if (m.path === 'name') setTitle(p.name);
         this.events.emit('settingsChanged', undefined);
         break;
       }
@@ -371,6 +372,10 @@ export class ProjectService {
     while (this.project.assets.assets.some((a) => a.id === id)) id = `${clean}_${i++}`;
     return id;
   }
+}
+
+function setTitle(name: string): void {
+  if (typeof document !== 'undefined') document.title = `${name} – Forge Editor`;
 }
 
 export function getPath(obj: Record<string, unknown>, path: string): unknown {
