@@ -242,7 +242,7 @@ export class EditorApp implements EditorContext {
       { id: 'file.new3d', title: 'New 3D project', category: 'File', run: () => this.navigateNew('3d') },
       { id: 'file.open', title: 'Open project…', category: 'File', shortcut: 'Mod+O', run: () => this.openProjectDialog() },
       { id: 'file.launcher', title: 'Back to launcher', category: 'File', run: () => { location.href = './index.html'; } },
-      { id: 'file.settings', title: 'Project settings', category: 'File', shortcut: 'Mod+,', run: () => this.showTab('settings') },
+      { id: 'file.settings', title: 'Project settings', category: 'File', shortcut: 'Mod+Alt+P', run: () => this.showTab('settings') },
       { id: 'edit.undo', title: 'Undo', category: 'Edit', shortcut: 'Mod+Z', icon: 'undo', enabled: () => commands.canUndo, run: () => { commands.undo(); } },
       { id: 'edit.redo', title: 'Redo', category: 'Edit', shortcut: 'Mod+Shift+Z,Mod+Y', icon: 'redo', enabled: () => commands.canRedo, run: () => { commands.redo(); } },
       { id: 'entity.duplicate', title: 'Duplicate', category: 'Entity', shortcut: 'Mod+D', icon: 'copy', enabled: hasSel, run: () => this.duplicate() },

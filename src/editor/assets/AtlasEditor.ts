@@ -38,7 +38,8 @@ export function openAtlasEditor(image: { id: string; url: string }, existingIds:
   };
   const draw = (): void => {
     if (!img.width) return;
-    const scale = Math.min(1, 520 / img.width, 360 / img.height);
+    // Upscale small (pixel-art) sheets so the grid is readable; never exceed 8x.
+    const scale = Math.min(8, 520 / img.width, 360 / img.height);
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     ctx.imageSmoothingEnabled = false;
