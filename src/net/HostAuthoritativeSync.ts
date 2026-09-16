@@ -326,7 +326,10 @@ export class HostAuthoritativeSync implements NetSync {
     } else {
       const saved = this.savedBodyTypes.get(e);
       if (saved !== undefined) {
-        if (rb) rb.bodyType = saved;
+        // Authority came back (host migration, ownership return): resume from the last replicated
+        // velocity instead of the zero the kinematic copy had, so a rolling puck keeps rolling.
+        const nt = world.getComponent(e, NetTransform);
+        if (rb) { rb.bodyType = saved; if (nt) rb.velocity.set(nt.targetVelocity.x, nt.targetVelocity.y); }
         if (rb3) rb3.bodyType = saved;
         this.savedBodyTypes.delete(e);
       }

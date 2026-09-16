@@ -19,18 +19,36 @@ defineScript({
     s.unsub = [];
     s.over = false;
     s.paddles = { left: ctx.find('Paddle Left'), right: ctx.find('Paddle Right') };
-    if (ctx.net.isHost) {
-      this.assign(ctx, ctx.net.localId);
-      const sync = ctx.net.hub.sync;
-      if (sync) {
-        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.assign(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.assign(ctx, peerId); this.resendHud(ctx); }));
-        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.unassign(ctx, peerId)));
-      }
-      this.refreshControllers(ctx);
-      ctx.timer(ctx.props.serveDelay, () => this.serve(ctx, ctx.random.chance(0.5) ? 1 : -1));
-    }
+    if (ctx.net.isHost) this.becomeHost(ctx);
     this.drawHud(ctx);
+  },
+  /** Host migration: the peer that took over seats players, serves and scores from here on. */
+  onHostChanged(ctx, isHost) {
+    if (isHost) this.becomeHost(ctx);
+  },
+  becomeHost(ctx) {
+    const s = ctx.state;
+    if (s.serving) return;
+    s.serving = true;
+    const sync = ctx.net.hub.sync;
+    if (sync) {
+      // Teams come from the last HUD RPC when we take over: drop peers that are gone, seat everyone else.
+      const present = new Set(sync.players().map((p) => p.peerId));
+      for (const side of ['left', 'right']) s.teams[side] = s.teams[side].filter((p) => present.has(p));
+      for (const p of sync.players()) this.assign(ctx, p.peerId);
+      s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.assign(ctx, peerId); this.resendHud(ctx); }));
+      s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.unassign(ctx, peerId)));
+    } else this.assign(ctx, ctx.net.localId);
+    this.refreshControllers(ctx);
+    if (s.over) ctx.timer(4, () => this.newMatch(ctx));
+    else if (this.puckIdle(ctx)) ctx.timer(ctx.props.serveDelay, () => this.serve(ctx, ctx.random.chance(0.5) ? 1 : -1));
+    this.resendHud(ctx);
+  },
+  /** True when the puck is (nearly) still: a fresh table, or a serve the old host never got to. */
+  puckIdle(ctx) {
+    const puck = ctx.find('Puck');
+    const rb = puck !== undefined ? ctx.getOn(puck, 'RigidBody2D') : null;
+    return !rb || Math.hypot(rb.velocity.x, rb.velocity.y) < 0.2;
   },
   onDestroy(ctx) {
     for (const off of ctx.state.unsub) off();
@@ -55,7 +73,11 @@ defineScript({
     for (const side of ['left', 'right']) s.teams[side] = s.teams[side].filter((p) => p !== peerId);
     this.refreshControllers(ctx);
   },
-  /** Write team membership into PlayerInput (owner + coOwners) and NetworkIdentity. */
+  /**
+   * Seat each team on its paddle. Online this goes through the sync
+   * (`setOwner` / `shareControl`) so every peer's copy carries the same
+   * owner and co-owners; the AI flag travels with the HUD RPC.
+   */
   refreshControllers(ctx) {
     const s = ctx.state;
     const sync = ctx.net.hub.sync;
@@ -63,23 +85,19 @@ defineScript({
       const e = s.paddles[side];
       if (e === undefined) continue;
       const team = s.teams[side];
+      const owner = team[0] || 'ai';
+      const coOwners = team.slice(1);
+      ctx.getOn(e, 'Script').props.ai = team.length === 0 && ctx.props.aiWhenAlone;
       const pi = ctx.getOn(e, 'PlayerInput');
-      const ni = ctx.getOn(e, 'NetworkIdentity');
-      const script = ctx.getOn(e, 'Script');
-      const previous = pi.owner === 'ai' ? [] : [pi.owner, ...pi.coOwners];
-      if (team.length === 0) {
-        pi.owner = 'ai';
-        pi.coOwners = [];
-        script.props.ai = ctx.props.aiWhenAlone;
+      if (sync && ctx.net.isHost) {
+        sync.setOwner(e, owner);
+        const ni = ctx.getOn(e, 'NetworkIdentity');
+        const stale = new Set([...pi.coOwners, ...(ni ? ni.sharedWith : [])]);
+        for (const p of stale) if (!coOwners.includes(p)) sync.shareControl(e, p, false);
+        for (const p of coOwners) sync.shareControl(e, p, true);
       } else {
-        pi.owner = team[0];
-        pi.coOwners = team.slice(1);
-        script.props.ai = false;
-      }
-      if (ni) { ni.ownerId = team[0] || 'host'; ni.sharedWith = team.slice(1); }
-      if (sync) {
-        for (const p of previous) if (!team.includes(p)) sync.shareControl(e, p, false);
-        for (const p of team.slice(1)) sync.shareControl(e, p, true);
+        pi.owner = owner;
+        pi.coOwners = coOwners;
       }
     }
     this.drawHud(ctx);
@@ -117,14 +135,16 @@ defineScript({
     const h = hud(ctx);
     if (h) h.panel('winner', ctx.state.winner, 'New match in a moment');
     this.drawHud(ctx);
-    ctx.timer(4, () => {
-      ctx.state.score = { left: 0, right: 0 };
-      ctx.state.over = false;
-      ctx.state.winner = null;
-      if (h) h.remove('winner');
-      this.drawHud(ctx);
-      this.serve(ctx, ctx.random.chance(0.5) ? 1 : -1);
-    });
+    ctx.timer(4, () => this.newMatch(ctx));
+  },
+  newMatch(ctx) {
+    ctx.state.score = { left: 0, right: 0 };
+    ctx.state.over = false;
+    ctx.state.winner = null;
+    const h = hud(ctx);
+    if (h) h.remove('winner');
+    this.drawHud(ctx);
+    this.serve(ctx, ctx.random.chance(0.5) ? 1 : -1);
   },
 
   /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
@@ -143,13 +163,22 @@ defineScript({
     ctx.state.score = d.score;
     ctx.state.teams = d.teams;
     ctx.state.winner = d.winner;
+    ctx.state.over = !!d.winner;
+    // Guest copies of the paddles mirror the host's AI flag (Script props of scene entities are not replicated).
+    for (const side of ['left', 'right']) {
+      const e = ctx.state.paddles[side];
+      const script = e !== undefined ? ctx.getOn(e, 'Script') : null;
+      if (script && d.ai) script.props.ai = !!d.ai[side];
+    }
     const h = hud(ctx);
     if (h) { if (d.winner) h.panel('winner', d.winner, 'New match in a moment'); else h.remove('winner'); }
     this.drawHud(ctx);
   },
   drawHud(ctx) {
     const s = ctx.state;
-    this.broadcastHud(ctx, { score: s.score, teams: s.teams, winner: s.winner || null });
+    const ai = {};
+    for (const side of ['left', 'right']) { const e = s.paddles[side]; ai[side] = e !== undefined ? !!ctx.getOn(e, 'Script').props.ai : false; }
+    this.broadcastHud(ctx, { score: s.score, teams: s.teams, winner: s.winner || null, ai });
     const h = hud(ctx);
     if (!h) return;
     h.text('score', `${s.score.left}   -   ${s.score.right}`, { anchor: 'top', y: 8 }).style.fontSize = '28px';

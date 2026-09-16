@@ -28,16 +28,40 @@ defineScript({
     s.coinSpots = ctx.findAll('coin').map((e) => { const t = ctx.getOn(e, 'Transform'); return { x: t.x, y: t.y }; });
     s.totalCoins = s.coinSpots.length;
 
-    if (ctx.net.isHost) {
-      this.addPlayer(ctx, ctx.net.localId);
-      const sync = ctx.net.hub.sync;
-      if (sync) {
-        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
-        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
-      }
-    }
+    if (ctx.net.isHost) this.becomeHost(ctx);
     this.drawHud(ctx);
+  },
+  /** Host migration: the peer that took over runs the level from here on. */
+  onHostChanged(ctx, isHost) {
+    if (isHost) this.becomeHost(ctx);
+  },
+  becomeHost(ctx) {
+    const s = ctx.state;
+    if (s.serving) return;
+    s.serving = true;
+    const sync = ctx.net.hub.sync;
+    this.adoptPlayers(ctx);
+    this.addPlayer(ctx, ctx.net.localId);
+    if (sync) {
+      for (const p of sync.players()) this.addPlayer(ctx, p.peerId);
+      s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
+      s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
+    }
+    if (s.complete) ctx.timer(ctx.props.restartDelay, () => this.restart(ctx));   // the old host's timer is gone
+    this.resendHud(ctx);
+  },
+  /** New host: hoppers the previous host spawned become our players. */
+  adoptPlayers(ctx) {
+    const s = ctx.state;
+    s.players = {};
+    for (const e of ctx.world.with('NetworkIdentity')) {
+      const ni = ctx.getOn(e, 'NetworkIdentity');
+      if (ni.prefab !== 'Hopper') continue;
+      const label = ctx.getOn(e, 'Script').props.label || `P${s.count + 1}`;
+      const index = Math.max(0, (parseInt(label.slice(1), 10) || 1) - 1);
+      s.players[ni.ownerId] = { entity: e, index };
+      s.count = Math.max(s.count, index + 1);
+    }
   },
   onDestroy(ctx) {
     for (const off of ctx.state.unsub) off();
@@ -140,6 +164,8 @@ defineScript({
     s.totalCoins = d.totalCoins;
     if (Math.abs((ctx.time.elapsed - s.startTime) - d.secs) > 1.5) s.startTime = ctx.time.elapsed - d.secs;
     s.complete = d.complete;
+    s.done = d.done;
+    if (d.checkpoint) s.checkpoint = d.checkpoint;   // respawns keep working if we take over as host
     const h = hud(ctx);
     if (h) { if (d.done) h.panel('complete', 'Level complete!', d.done); else h.remove('complete'); }
     this.drawHud(ctx);
@@ -147,7 +173,7 @@ defineScript({
   drawHud(ctx) {
     const s = ctx.state;
     const secs = Math.floor(ctx.time.elapsed - s.startTime);
-    this.broadcastHud(ctx, { coins: s.coins, totalCoins: s.totalCoins, secs, complete: s.complete, done: s.done || null });
+    this.broadcastHud(ctx, { coins: s.coins, totalCoins: s.totalCoins, secs, complete: s.complete, done: s.done || null, checkpoint: s.checkpoint });
     const h = hud(ctx);
     if (!h) return;
     h.text('coins', `Coins ${s.coins} / ${s.totalCoins}   ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, { anchor: 'top-left' });

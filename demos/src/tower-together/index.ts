@@ -48,7 +48,8 @@ export function build(): DemoBundle {
       Transform: {},
       Shape: { kind: 'rect', width: 1, height: 1, filled: false, stroke: hex('#4cc2ff'), strokeWidth: 0.1, layer: 20 },
       PlayerInput: { owner: 'local', mergeStrategy: 'first-wins' },
-      NetworkIdentity: { prefab: 'Builder', authority: 'host' },
+      // `Shape` replicates so guests see the cursor's valid / invalid / unaffordable colour.
+      NetworkIdentity: { prefab: 'Builder', authority: 'host', syncComponents: ['Shape'] },
       NetTransform: { syncRotation: false, interpolationDelay: 1 },
       Script: { script: 'Builder', props: {} },
     }, { tags: ['builder'] });

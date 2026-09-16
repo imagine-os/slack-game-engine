@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  Engine, EventEmitter, PlayerInput, instantiatePrefab, normalizeProject, runProject,
+  Engine, EventEmitter, HostAuthoritativeSync, MemoryNetwork, NetworkIdentity, PlayerInput, Script, instantiatePrefab, normalizeProject, runProject,
   type Diagnostic, type Entity, type InputSnapshot, type NetSync, type NetSyncEvents, type NetSyncOptions, type Project,
 } from '../src/index';
 import { DEMOS_DIR, generateAll, stalePaths } from '../scripts/build-demos';
@@ -76,8 +76,19 @@ class FakeSync implements NetSync {
     return e;
   }
   despawn(entity: Entity): void { if (this.engine.world.isAlive(entity)) this.engine.world.destroyEntityDeferred(entity); }
-  setOwner(): void {}
-  shareControl(entity: Entity, peerId: string, enabled: boolean): void { this.shared.push({ entity, peerId, enabled }); }
+  setOwner(entity: Entity, ownerId: string): void {
+    const pi = this.engine.world.getComponent(entity, PlayerInput);
+    if (pi) { pi.owner = ownerId; pi.coOwners = pi.coOwners.filter((p) => p !== ownerId); }
+    const ni = this.engine.world.getComponent(entity, NetworkIdentity);
+    if (ni) ni.ownerId = ownerId;
+  }
+  shareControl(entity: Entity, peerId: string, enabled: boolean): void {
+    this.shared.push({ entity, peerId, enabled });
+    const pi = this.engine.world.getComponent(entity, PlayerInput);
+    if (!pi) return;
+    pi.coOwners = pi.coOwners.filter((p) => p !== peerId);
+    if (enabled && peerId !== pi.owner) pi.coOwners.push(peerId);
+  }
   submitInput(_s: InputSnapshot): void {}
   inputFor(): InputSnapshot | undefined { return undefined; }
   onRpc(): () => void { return () => {}; }
@@ -157,6 +168,66 @@ describe('bundled demos (headless)', () => {
         expect(paddles.every((pi) => pi.mergeStrategy === 'average')).toBe(true);
       }
       engine.dispose();
+    });
+  }
+});
+
+describe('bundled demos over a MemoryNetwork: host migration', () => {
+  interface Peer { engine: Engine; errors: Diagnostic[]; sync: HostAuthoritativeSync; id: string }
+
+  async function join(net: MemoryNetwork, project: Project, name: string): Promise<Peer> {
+    const { engine, errors } = headlessEngine();
+    const transport = net.createTransport();
+    engine.net.displayName = name;
+    engine.net.setTransport(transport);
+    await transport.connect({ roomId: 'demo', displayName: name });
+    await runProject(engine, project);
+    const sync = new HostAuthoritativeSync(engine, { autoInput: false, sharedControl: project.settings.multiUser.sharedControl, mergeStrategy: project.settings.multiUser.mergeStrategy });
+    engine.net.setSync(sync);
+    sync.start();
+    return { engine, errors, sync, id: transport.localId };
+  }
+  const pump = (peers: Peer[], net: MemoryNetwork, frames: number) => { for (let i = 0; i < frames; i++) { for (const p of peers) p.engine.step(1 / 60); net.flush(); } };
+  /** Peers that control something on `p` (PlayerInput owner or co-owner). */
+  const controllers = (p: Peer) => { const out = new Set<string>(); for (const pi of p.engine.world.componentsOfType(PlayerInput)) { out.add(pi.owner); for (const c of pi.coOwners) out.add(c); } return out; };
+  const manager = (p: Peer) => p.engine.scripting.instanceOf(p.engine.world.findByName('GameManager')!)!.ctx.state as { serving?: boolean };
+
+  for (const id of ids.filter((d) => loadProject(d).settings.network.mode === 'host-authoritative')) {
+    it(`${id}: the guest takes over as host, keeps serving and spawns a late joiner`, async () => {
+      const project = loadProject(id);
+      const net = new MemoryNetwork();
+      const host = await join(net, project, 'Host');
+      pump([host], net, 30);
+      const guest = await join(net, project, 'Guest');
+      const peers = [host, guest];
+      pump(peers, net, 120);
+      expect(controllers(host).has(guest.id), `${id}: guest controls something on the host`).toBe(true);
+      expect(manager(guest).serving, `${id}: a guest does not serve`).toBeUndefined();
+
+      await host.sync.transport.disconnect();
+      peers.splice(0, 1);
+      pump(peers, net, 90);
+      expect(guest.sync.isHost).toBe(true);
+      expect(manager(guest).serving, `${id}: the new host serves`).toBe(true);
+      expect(guest.sync.players().map((p) => p.displayName)).toEqual(['Guest']);
+      // Nothing is owned by the departed host any more and physics runs locally again.
+      for (const ni of guest.engine.world.componentsOfType(NetworkIdentity)) expect(ni.ownerId, `${id}: ${guest.engine.world.nameOf(ni.entity)} owner`).not.toBe(host.id);
+      expect(guest.sync.simulatesEntity(guest.engine.world.findByName('GameManager')!)).toBe(true);
+      expect(controllers(guest).has(guest.id)).toBe(true);
+
+      const third = await join(net, project, 'Third');
+      peers.push(third);
+      pump(peers, net, 120);
+      expect(controllers(guest).has(third.id), `${id}: late joiner seated by the new host`).toBe(true);
+      expect(controllers(third).has(third.id), `${id}: late joiner sees its own seat`).toBe(true);
+      // The manager on the guest and the third page agree on which entities exist.
+      const netIds = (p: Peer) => Array.from(p.engine.world.componentsOfType(NetworkIdentity)).filter((n) => n.prefab).map((n) => n.netId).sort();
+      expect(netIds(third)).toEqual(netIds(guest));
+      // Scripts on both peers ran clean, including the manager's Script props.
+      expect(guest.errors.map((e) => e.message)).toEqual([]);
+      expect(third.errors.map((e) => e.message)).toEqual([]);
+      for (const p of [guest, third]) for (const sc of p.engine.world.componentsOfType(Script)) expect(sc.enabled).toBe(true);
+      for (const p of peers) p.engine.dispose();
     });
   }
 });

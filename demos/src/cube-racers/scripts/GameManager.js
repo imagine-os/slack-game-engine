@@ -20,17 +20,43 @@ defineScript({
     s.count = 0;
     s.unsub = [];
     s.finished = false;
-    if (ctx.net.isHost) {
-      this.addPlayer(ctx, ctx.net.localId);
-      const sync = ctx.net.hub.sync;
-      if (sync) {
-        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
-        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
-      }
-      this.startCountdown(ctx);
-    }
+    if (ctx.net.isHost) this.becomeHost(ctx);
     this.drawStandings(ctx);
+  },
+  /** Host migration: the peer that took over directs the race from here on. */
+  onHostChanged(ctx, isHost) {
+    if (isHost) this.becomeHost(ctx);
+  },
+  becomeHost(ctx) {
+    const s = ctx.state;
+    if (s.serving) return;
+    s.serving = true;
+    const sync = ctx.net.hub.sync;
+    this.adoptPlayers(ctx);
+    this.addPlayer(ctx, ctx.net.localId);
+    if (sync) {
+      for (const p of sync.players()) this.addPlayer(ctx, p.peerId);
+      s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
+      s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
+    }
+    if (s.finished) ctx.timer(6, () => this.restartRace(ctx));
+    else if (!s.raceStarted) this.startCountdown(ctx);
+    this.resendHud(ctx);
+  },
+  /** New host: karts the previous host put on the grid become our players; laps come from the last HUD RPC. */
+  adoptPlayers(ctx) {
+    const s = ctx.state;
+    const known = s.players;
+    s.players = {};
+    for (const e of ctx.world.with('NetworkIdentity')) {
+      const ni = ctx.getOn(e, 'NetworkIdentity');
+      if (ni.prefab !== 'Kart') continue;
+      const label = ctx.getOn(e, 'Script').props.label || `P${s.count + 1}`;
+      const k = known[ni.ownerId] || {};
+      const index = k.index !== undefined ? k.index : Math.max(0, (parseInt(label.slice(1), 10) || 1) - 1);
+      s.players[ni.ownerId] = { entity: e, index, lap: k.lap || 0, best: k.best || 0 };
+      s.count = Math.max(s.count, index + 1);
+    }
   },
   onDestroy(ctx) {
     for (const off of ctx.state.unsub) off();
@@ -115,18 +141,21 @@ defineScript({
     if (h) h.panel('winner', s.winner.title, s.winner.body);
     ctx.audio.play('go', { volume: 0.6 });
     this.drawStandings(ctx);
-    ctx.timer(6, () => {
-      for (const q of Object.values(s.players)) {
-        q.lap = 0; q.best = 0;
-        const slot = this.gridSlot(ctx, q.index);
-        ctx.sendTo(q.entity, 'resetTo', slot);
-      }
-      s.finished = false;
-      s.winner = null;
-      if (h) h.remove('winner');
-      this.drawStandings(ctx);
-      this.startCountdown(ctx);
-    });
+    ctx.timer(6, () => this.restartRace(ctx));
+  },
+  restartRace(ctx) {
+    const s = ctx.state;
+    for (const q of Object.values(s.players)) {
+      q.lap = 0; q.best = 0;
+      const slot = this.gridSlot(ctx, q.index);
+      ctx.sendTo(q.entity, 'resetTo', slot);
+    }
+    s.finished = false;
+    s.winner = null;
+    const h = hud(ctx);
+    if (h) h.remove('winner');
+    this.drawStandings(ctx);
+    this.startCountdown(ctx);
   },
 
   /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
@@ -146,6 +175,8 @@ defineScript({
     s.players = d.players;   // { peerId: { index, lap, best } } — no entities on this side
     if (d.raceStarted && !s.raceStarted) ctx.send('go', {});   // local karts start their lap timers
     s.raceStarted = d.raceStarted;
+    s.finished = !!d.winner;
+    s.winner = d.winner;
     const h = hud(ctx);
     if (h) {
       if (d.countdown) h.text('countdown', d.countdown, { anchor: 'center' }).style.fontSize = '72px'; else h.remove('countdown');

@@ -41,17 +41,44 @@ defineScript({
     s.players = {};
     s.count = 0;
     s.unsub = [];
-    if (ctx.net.isHost) {
-      this.addPlayer(ctx, ctx.net.localId);
-      const sync = ctx.net.hub.sync;
-      if (sync) {
-        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
-        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
-      }
-      s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;
-    }
+    if (ctx.net.isHost) this.becomeHost(ctx);
     this.drawHud(ctx);
+  },
+  /** Host migration: the peer that took over runs gold, waves and placement from here on. */
+  onHostChanged(ctx, isHost) {
+    if (isHost) this.becomeHost(ctx);
+  },
+  becomeHost(ctx) {
+    const s = ctx.state;
+    if (s.serving) return;
+    s.serving = true;
+    const sync = ctx.net.hub.sync;
+    this.adoptPlayers(ctx);
+    this.addPlayer(ctx, ctx.net.localId);
+    if (sync) {
+      for (const p of sync.players()) this.addPlayer(ctx, p.peerId);
+      s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
+      s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
+    }
+    // Fresh game: first wave after the delay. Takeover: continue the wave the old host was serving.
+    if (s.wave === 0 && s.nextWaveAt === undefined && !s.over) s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;
+    if (s.over) ctx.timer(6, () => this.restart(ctx));
+    else if (s.toSpawn > 0) this.spawnNext(ctx);
+    ctx.send('goldChanged', { gold: s.gold });
+    this.resendHud(ctx);
+  },
+  /** New host: builder cursors the previous host spawned become our players. */
+  adoptPlayers(ctx) {
+    const s = ctx.state;
+    s.players = {};
+    for (const e of ctx.world.with('NetworkIdentity')) {
+      const ni = ctx.getOn(e, 'NetworkIdentity');
+      if (ni.prefab !== 'Builder') continue;
+      const label = ctx.getOn(e, 'Script').props.label || `P${s.count + 1}`;
+      const index = Math.max(0, (parseInt(label.slice(1), 10) || 1) - 1);
+      s.players[ni.ownerId] = { entity: e, index };
+      s.count = Math.max(s.count, index + 1);
+    }
   },
   onDestroy(ctx) {
     for (const off of ctx.state.unsub) off();
@@ -137,22 +164,24 @@ defineScript({
     s.wave++;
     s.cleared = false;
     s.toSpawn = 4 + s.wave * 2;
+    this.spawnNext(ctx);
+    this.drawHud(ctx);
+  },
+  /** Spawn the wave's remaining enemies one by one (also resumes an interrupted wave after host migration). */
+  spawnNext(ctx) {
+    const s = ctx.state;
+    if (s.over || s.toSpawn <= 0) return;
+    s.toSpawn--;
     const hp = 2 + Math.floor(s.wave * 1.3);
     const speed = 1.6 + s.wave * 0.1;
     const start = ctx.props.path[0];
-    const spawnOne = () => {
-      if (s.over || s.toSpawn <= 0) return;
-      s.toSpawn--;
-      const e = ctx.net.spawn('Enemy', { position: { x: start[0], y: start[1] } });
-      const sc = ctx.getOn(e, 'Script');
-      sc.props.hp = hp;
-      sc.props.speed = speed;
-      sc.props.reward = 6 + s.wave;
-      if (s.wave % 3 === 0 && s.toSpawn % 4 === 0) { sc.props.hp = hp * 3; sc.props.speed = speed * 0.7; sc.props.reward *= 3; sc.props.big = true; }
-      if (s.toSpawn > 0) ctx.timer(Math.max(0.35, 0.9 - s.wave * 0.05), spawnOne);
-    };
-    spawnOne();
-    this.drawHud(ctx);
+    const e = ctx.net.spawn('Enemy', { position: { x: start[0], y: start[1] } });
+    const sc = ctx.getOn(e, 'Script');
+    sc.props.hp = hp;
+    sc.props.speed = speed;
+    sc.props.reward = 6 + s.wave;
+    if (s.wave % 3 === 0 && s.toSpawn % 4 === 0) { sc.props.hp = hp * 3; sc.props.speed = speed * 0.7; sc.props.reward *= 3; sc.props.big = true; }
+    if (s.toSpawn > 0) ctx.timer(Math.max(0.35, 0.9 - s.wave * 0.05), () => this.spawnNext(ctx));
   },
   gameOver(ctx) {
     const s = ctx.state;
@@ -195,7 +224,7 @@ defineScript({
     if (name !== 'hud' || ctx.net.isHost) return;
     const d = args[0];
     const s = ctx.state;
-    s.gold = d.gold; s.base = d.base; s.wave = d.wave; s.toSpawn = d.toSpawn; s.over = d.over;
+    s.gold = d.gold; s.base = d.base; s.wave = d.wave; s.toSpawn = d.toSpawn; s.over = d.over; s.overBody = d.overBody;
     s.nextWaveAt = d.secsToWave === null ? undefined : ctx.time.elapsed + d.secsToWave;
     ctx.send('goldChanged', { gold: s.gold });   // local Builders colour their cursor by affordability
     const h = hud(ctx);
