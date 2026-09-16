@@ -163,3 +163,24 @@ describe('Engine headless', () => {
     engine.dispose();
   });
 });
+
+describe('ScriptRuntime RPC delivery', () => {
+  it('queues an RPC that arrives before the script started and delivers it right after onStart', () => {
+    const engine = Engine.create(null, { audio: false });
+    engine.scripting.consoleLogging = false;
+    engine.scripting.compile(`defineScript({ name: 'Hud', onStart(ctx) { ctx.state.log = ['start']; }, onRpc(ctx, name, args, from) { ctx.state.log.push(name + ':' + args[0] + ':' + from); } })`);
+    const e = engine.world.createEntity('GM');
+    engine.world.addComponent(e, Script, { script: 'Hud' });
+    // The instance exists (the definition is known) but has not run onStart: no frame yet.
+    engine.scripting.rpc(e, 'hud', [1], 'host');
+    engine.scripting.rpc(e, 'hud', [2], 'host');
+    expect(engine.scripting.instanceOf(e)!.started).toBe(false);
+    engine.step(1 / 60);
+    const st = engine.scripting.instanceOf(e)!.ctx.state as { log: string[] };
+    expect(st.log).toEqual(['start', 'hud:1:host', 'hud:2:host']);
+    // Once started, RPCs are delivered immediately.
+    engine.scripting.rpc(e, 'hud', [3], 'host');
+    expect(st.log).toHaveLength(4);
+    engine.dispose();
+  });
+});

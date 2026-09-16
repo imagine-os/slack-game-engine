@@ -84,6 +84,9 @@ with the same props (late joiners get the same through the `welcome`).
 HUD or other host-only state that guests should see travels as an RPC on the
 manager entity: `ctx.net.rpc('hud', [payload], 'others')` on the host and
 `onRpc(ctx, name, args)` on every peer (see the demos' `GameManager` scripts).
+Resend it on `playerJoined` so newcomers get the current state; an RPC that
+reaches a peer before its script ran `onStart` is queued and delivered right
+after it.
 
 ### Host migration: `onHostChanged`
 

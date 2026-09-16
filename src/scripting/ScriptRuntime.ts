@@ -31,7 +31,12 @@ interface Instance {
   disabled: boolean;
   timers: Timer[];
   state: Record<string, unknown>;
+  /** RPCs that arrived before `onStart` ran; delivered right after it. */
+  pendingRpcs?: { name: string; args: unknown[]; from: string }[];
 }
+
+/** Most RPCs kept for an instance that has not started yet. */
+const MAX_PENDING_RPCS = 64;
 
 /** Globals shadowed inside user scripts so they cannot reach the page by accident. */
 const SHADOWED_GLOBALS = ['window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames', 'location', 'navigator', 'fetch', 'XMLHttpRequest', 'WebSocket', 'localStorage', 'sessionStorage', 'indexedDB', 'Function', 'importScripts', 'alert', 'prompt', 'confirm', 'open'];
@@ -254,6 +259,13 @@ export class ScriptRuntime {
         const owner = (this.engine.world.getComponent(inst.entity, 'NetworkIdentity') as unknown as { ownerId: string }).ownerId;
         this.invoke(inst, 'onNetSpawn', owner);
       }
+      // A late joiner's welcome traffic (HUD state, ownership RPCs) can land before the first frame
+      // started this script; deliver it now instead of dropping it.
+      const pending = inst.pendingRpcs;
+      if (pending) {
+        inst.pendingRpcs = undefined;
+        for (const r of pending) { if (!this.active(inst)) break; this.invoke(inst, 'onRpc', r.name, r.args, r.from); }
+      }
     }
   }
 
@@ -297,10 +309,16 @@ export class ScriptRuntime {
     }
   }
 
-  /** Deliver an RPC to the script on `entity`. */
+  /** Deliver an RPC to the script on `entity` (queued until `onStart` when the script has not started yet). */
   rpc(entity: Entity, name: string, args: unknown[], from: string): void {
     const inst = this.instances.get(entity);
-    if (inst && this.active(inst)) this.invoke(inst, 'onRpc', name, args, from);
+    if (!inst || inst.disabled || !this.engine.world.isAlive(entity)) return;
+    if (!inst.started) {
+      const q = (inst.pendingRpcs ??= []);
+      if (q.length < MAX_PENDING_RPCS) q.push({ name, args, from });
+      return;
+    }
+    if (this.active(inst)) this.invoke(inst, 'onRpc', name, args, from);
   }
 
   private dispatchCollision(hook: 'onCollisionEnter' | 'onCollisionExit' | 'onTriggerEnter' | 'onTriggerExit', ev: CollisionEvent): void {
