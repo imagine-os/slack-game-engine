@@ -1,0 +1,4888 @@
+{
+  "id": "cube-racers",
+  "name": "Cube Racers",
+  "version": 1,
+  "projectVersion": "0.1.0",
+  "description": "WebGL arcade racer for 1-6 players: drive kart cubes around a walled circuit with cones and chicanes, chase camera, checkpoints and lap timing.",
+  "author": "Forge Engine demos",
+  "thumbnail": "thumbnail.svg",
+  "createdAt": "2026-09-16T00:00:00.000Z",
+  "updatedAt": "2026-09-16T00:00:00.000Z",
+  "scenes": [
+    {
+      "version": 1,
+      "name": "Circuit",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 28,
+                  "y": 6,
+                  "z": 20
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Camera"
+              }
+            },
+            {
+              "type": "Camera3D",
+              "data": {
+                "fov": 60,
+                "near": 0.1,
+                "far": 400,
+                "orthographic": false,
+                "orthoSize": 10,
+                "active": true,
+                "priority": 0,
+                "clearColor": {
+                  "r": 0.1,
+                  "g": 0.11,
+                  "b": 0.14,
+                  "a": 1
+                },
+                "skyTop": {
+                  "r": 0.22745098039215686,
+                  "g": 0.43529411764705883,
+                  "b": 0.8470588235294118,
+                  "a": 1
+                },
+                "skyBottom": {
+                  "r": 0.8588235294117647,
+                  "g": 0.9019607843137255,
+                  "b": 0.9607843137254902,
+                  "a": 1
+                },
+                "skybox": true,
+                "fogEnabled": true,
+                "fogColor": {
+                  "r": 0.788235294117647,
+                  "g": 0.8392156862745098,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "fogNear": 60,
+                "fogFar": 160,
+                "lookAt": 0
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "ChaseCamera",
+                "props": {
+                  "distance": 9,
+                  "height": 4.5,
+                  "lookAhead": 6,
+                  "smoothing": 5
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "AudioListener",
+              "data": {
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Camera"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "GameManager"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "GameManager",
+                "props": {
+                  "laps": 3,
+                  "countdown": 3,
+                  "gridX": 28,
+                  "gridZ": 4,
+                  "heading": 3.141592653589793
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "",
+                "sharedWith": [],
+                "replicate": false
+              }
+            }
+          ],
+          "name": "GameManager"
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 20,
+                  "y": 40,
+                  "z": 10
+                },
+                "rotation": {
+                  "x": -0.46452135963892854,
+                  "y": 0.21711740038440563,
+                  "z": -0.11861177641841196,
+                  "w": 0.8503006452922328
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Sun"
+              }
+            },
+            {
+              "type": "Light",
+              "data": {
+                "kind": "directional",
+                "color": {
+                  "r": 1,
+                  "g": 0.9568627450980393,
+                  "b": 0.8784313725490196,
+                  "a": 1
+                },
+                "intensity": 1.15,
+                "range": 10,
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Sun"
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ambient"
+              }
+            },
+            {
+              "type": "Light",
+              "data": {
+                "kind": "ambient",
+                "color": {
+                  "r": 0.6235294117647059,
+                  "g": 0.7058823529411765,
+                  "b": 1,
+                  "a": 1
+                },
+                "intensity": 0.35,
+                "range": 10,
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Ambient"
+        },
+        {
+          "id": 5,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 200,
+                  "y": 1,
+                  "z": 200
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ground"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "plane",
+                "color": {
+                  "r": 0.30980392156862746,
+                  "g": 0.47843137254901963,
+                  "b": 0.2823529411764706,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 1,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Ground"
+        },
+        {
+          "id": 6,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": -0.5,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 200,
+                  "y": 1,
+                  "z": 200
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ground Collider"
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.1,
+                "friction": 0,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Ground Collider"
+        },
+        {
+          "id": 7,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Track"
+              }
+            }
+          ],
+          "name": "Track"
+        },
+        {
+          "id": 8,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.02,
+                  "z": -15
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 70,
+                  "y": 0.04,
+                  "z": 14
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Straight North"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.23137254901960785,
+                  "g": 0.24705882352941178,
+                  "b": 0.2901960784313726,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.95,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Straight North",
+          "parent": 7
+        },
+        {
+          "id": 9,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.02,
+                  "z": 15
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 70,
+                  "y": 0.04,
+                  "z": 14
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Straight South"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.23137254901960785,
+                  "g": 0.24705882352941178,
+                  "b": 0.2901960784313726,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.95,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Straight South",
+          "parent": 7
+        },
+        {
+          "id": 10,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -28,
+                  "y": 0.02,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 14,
+                  "y": 0.04,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Straight West"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.23137254901960785,
+                  "g": 0.24705882352941178,
+                  "b": 0.2901960784313726,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.95,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Straight West",
+          "parent": 7
+        },
+        {
+          "id": 11,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 28,
+                  "y": 0.02,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 14,
+                  "y": 0.04,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Straight East"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.23137254901960785,
+                  "g": 0.24705882352941178,
+                  "b": 0.2901960784313726,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.95,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Straight East",
+          "parent": 7
+        },
+        {
+          "id": 12,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.05,
+                  "z": -21.7
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 70,
+                  "y": 0.1,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Outer N"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Outer N",
+          "parent": 7
+        },
+        {
+          "id": 13,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.05,
+                  "z": 21.7
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 70,
+                  "y": 0.1,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Outer S"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Outer S",
+          "parent": 7
+        },
+        {
+          "id": 14,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -34.7,
+                  "y": 0.05,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.6,
+                  "y": 0.1,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Outer W"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Outer W",
+          "parent": 7
+        },
+        {
+          "id": 15,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 34.7,
+                  "y": 0.05,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.6,
+                  "y": 0.1,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Outer E"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9372549019607843,
+                  "g": 0.2784313725490196,
+                  "b": 0.43529411764705883,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Outer E",
+          "parent": 7
+        },
+        {
+          "id": 16,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.05,
+                  "z": -8.3
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 43.2,
+                  "y": 0.1,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Inner N"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9568627450980393,
+                  "g": 0.9686274509803922,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Inner N",
+          "parent": 7
+        },
+        {
+          "id": 17,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.05,
+                  "z": 8.3
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 43.2,
+                  "y": 0.1,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Inner S"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9568627450980393,
+                  "g": 0.9686274509803922,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Inner S",
+          "parent": 7
+        },
+        {
+          "id": 18,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -21.3,
+                  "y": 0.05,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.6,
+                  "y": 0.1,
+                  "z": 16
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Inner W"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9568627450980393,
+                  "g": 0.9686274509803922,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Inner W",
+          "parent": 7
+        },
+        {
+          "id": 19,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 21.3,
+                  "y": 0.05,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.6,
+                  "y": 0.1,
+                  "z": 16
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kerb Inner E"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.9568627450980393,
+                  "g": 0.9686274509803922,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Kerb Inner E",
+          "parent": 7
+        },
+        {
+          "id": 20,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Walls"
+              }
+            }
+          ],
+          "name": "Walls"
+        },
+        {
+          "id": 21,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.7,
+                  "z": -22.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 72,
+                  "y": 1.4,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Outer N"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.3568627450980392,
+                  "g": 0.4196078431372549,
+                  "b": 0.6039215686274509,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Outer N",
+          "parent": 20
+        },
+        {
+          "id": 22,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.7,
+                  "z": 22.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 72,
+                  "y": 1.4,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Outer S"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.3568627450980392,
+                  "g": 0.4196078431372549,
+                  "b": 0.6039215686274509,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Outer S",
+          "parent": 20
+        },
+        {
+          "id": 23,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -35.5,
+                  "y": 0.7,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1.4,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Outer W"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.3568627450980392,
+                  "g": 0.4196078431372549,
+                  "b": 0.6039215686274509,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Outer W",
+          "parent": 20
+        },
+        {
+          "id": 24,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 35.5,
+                  "y": 0.7,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1.4,
+                  "z": 44
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Outer E"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.3568627450980392,
+                  "g": 0.4196078431372549,
+                  "b": 0.6039215686274509,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Outer E",
+          "parent": 20
+        },
+        {
+          "id": 25,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.7,
+                  "z": -7.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 42,
+                  "y": 1.4,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Inner N"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.5607843137254902,
+                  "g": 0.6,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Inner N",
+          "parent": 20
+        },
+        {
+          "id": 26,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.7,
+                  "z": 7.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 42,
+                  "y": 1.4,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Inner S"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.5607843137254902,
+                  "g": 0.6,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Inner S",
+          "parent": 20
+        },
+        {
+          "id": 27,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -20.5,
+                  "y": 0.7,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1.4,
+                  "z": 16
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Inner W"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.5607843137254902,
+                  "g": 0.6,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Inner W",
+          "parent": 20
+        },
+        {
+          "id": 28,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 20.5,
+                  "y": 0.7,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1.4,
+                  "z": 16
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Inner E"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.5607843137254902,
+                  "g": 0.6,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.7,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Inner E",
+          "parent": 20
+        },
+        {
+          "id": 29,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.01,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 40,
+                  "y": 0.02,
+                  "z": 14
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Infield"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.41568627450980394,
+                  "g": 0.6392156862745098,
+                  "b": 0.35294117647058826,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 1,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Infield"
+        },
+        {
+          "id": 30,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": -28
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 30,
+                  "y": 4,
+                  "z": 6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Grandstand"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.788235294117647,
+                  "g": 0.8274509803921568,
+                  "b": 0.9019607843137255,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.8,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Grandstand"
+        },
+        {
+          "id": 31,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Checkpoints"
+              }
+            }
+          ],
+          "name": "Checkpoints"
+        },
+        {
+          "id": 32,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 28,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Checkpoint 0"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Checkpoint",
+                "props": {
+                  "index": 0,
+                  "halfX": 7,
+                  "halfZ": 0.8,
+                  "heading": 3.141592653589793
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "checkpoint"
+                ]
+              }
+            }
+          ],
+          "name": "Checkpoint 0",
+          "parent": 31
+        },
+        {
+          "id": 33,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6.5,
+                  "y": 2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 32
+        },
+        {
+          "id": 34,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 6.5,
+                  "y": 2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 32
+        },
+        {
+          "id": 35,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 4.2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 13,
+                  "y": 0.4,
+                  "z": 0.4
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Bar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": true,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 0.8,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Bar",
+          "parent": 32
+        },
+        {
+          "id": 36,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.045,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 14,
+                  "y": 0.02,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Start Line"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Start Line",
+          "parent": 32
+        },
+        {
+          "id": 37,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": -15
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Checkpoint 1"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Checkpoint",
+                "props": {
+                  "index": 1,
+                  "halfX": 0.8,
+                  "halfZ": 7,
+                  "heading": -1.5707963267948966
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "checkpoint"
+                ]
+              }
+            }
+          ],
+          "name": "Checkpoint 1",
+          "parent": 31
+        },
+        {
+          "id": 38,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": -6.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 37
+        },
+        {
+          "id": 39,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": 6.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 37
+        },
+        {
+          "id": 40,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 4.2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.4,
+                  "y": 0.4,
+                  "z": 13
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Bar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": true,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 0.8,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Bar",
+          "parent": 37
+        },
+        {
+          "id": 41,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -28,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Checkpoint 2"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Checkpoint",
+                "props": {
+                  "index": 2,
+                  "halfX": 7,
+                  "halfZ": 0.8,
+                  "heading": 0
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "checkpoint"
+                ]
+              }
+            }
+          ],
+          "name": "Checkpoint 2",
+          "parent": 31
+        },
+        {
+          "id": 42,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6.5,
+                  "y": 2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 41
+        },
+        {
+          "id": 43,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 6.5,
+                  "y": 2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 41
+        },
+        {
+          "id": 44,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 4.2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 13,
+                  "y": 0.4,
+                  "z": 0.4
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Bar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": true,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 0.8,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Bar",
+          "parent": 41
+        },
+        {
+          "id": 45,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 15
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Checkpoint 3"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Checkpoint",
+                "props": {
+                  "index": 3,
+                  "halfX": 0.8,
+                  "halfZ": 7,
+                  "heading": 1.5707963267948966
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "checkpoint"
+                ]
+              }
+            }
+          ],
+          "name": "Checkpoint 3",
+          "parent": 31
+        },
+        {
+          "id": 46,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": -6.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 45
+        },
+        {
+          "id": 47,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": 6.5
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.5,
+                  "y": 4,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Pillar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 0.8470588235294118,
+                  "g": 0.8627450980392157,
+                  "b": 0.9098039215686274,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.5,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Pillar",
+          "parent": 45
+        },
+        {
+          "id": 48,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 4.2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.4,
+                  "y": 0.4,
+                  "z": 13
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Bar"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": true,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 0.8,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Bar",
+          "parent": 45
+        },
+        {
+          "id": 49,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Obstacles"
+              }
+            }
+          ],
+          "name": "Obstacles"
+        },
+        {
+          "id": 50,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 24,
+                  "y": 0.5,
+                  "z": -8
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 1"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 1",
+          "parent": 49
+        },
+        {
+          "id": 51,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 31,
+                  "y": 0.5,
+                  "z": -12
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 2"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 2",
+          "parent": 49
+        },
+        {
+          "id": 52,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -10,
+                  "y": 0.5,
+                  "z": -11
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 3"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 3",
+          "parent": 49
+        },
+        {
+          "id": 53,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -14,
+                  "y": 0.5,
+                  "z": -18
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 4"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 4",
+          "parent": 49
+        },
+        {
+          "id": 54,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -25,
+                  "y": 0.5,
+                  "z": 6
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 5"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 5",
+          "parent": 49
+        },
+        {
+          "id": 55,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -32,
+                  "y": 0.5,
+                  "z": 10
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 6"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 6",
+          "parent": 49
+        },
+        {
+          "id": 56,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 8,
+                  "y": 0.5,
+                  "z": 12
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 7"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 7",
+          "parent": 49
+        },
+        {
+          "id": 57,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 14,
+                  "y": 0.5,
+                  "z": 19
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 1,
+                  "z": 0.8
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cone 8"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cylinder",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.2,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Cone 8",
+          "parent": 49
+        },
+        {
+          "id": 58,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 4,
+                  "y": 0.6,
+                  "z": -19
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 6,
+                  "y": 1.2,
+                  "z": 1.2
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Chicane 1"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Chicane 1",
+          "parent": 49
+        },
+        {
+          "id": 59,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 16,
+                  "y": 0.6,
+                  "z": -11
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 6,
+                  "y": 1.2,
+                  "z": 1.2
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Chicane 2"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Chicane 2",
+          "parent": 49
+        },
+        {
+          "id": 60,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6,
+                  "y": 0.6,
+                  "z": 19
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 6,
+                  "y": 1.2,
+                  "z": 1.2
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Chicane 3"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.8196078431372549,
+                  "b": 0.4,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.6,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.3,
+                "friction": 0.5,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            }
+          ],
+          "name": "Chicane 3",
+          "parent": 49
+        }
+      ],
+      "settings": {
+        "seed": 7
+      }
+    }
+  ],
+  "startScene": "Circuit",
+  "scripts": [
+    {
+      "name": "ChaseCamera",
+      "source": "// Third-person camera that follows the local player's kart.\ndefineScript({\n  name: 'ChaseCamera',\n  description: 'Smooth chase camera behind the local kart.',\n  props: {\n    distance: { type: 'number', default: 9, min: 2, max: 40 },\n    height: { type: 'number', default: 4.5, min: 0.5, max: 30 },\n    lookAhead: { type: 'number', default: 6, min: 0, max: 40 },\n    smoothing: { type: 'number', default: 5, min: 0, max: 30 },\n  },\n  onLateUpdate(ctx, dt) {\n    let target;\n    for (const e of ctx.findAll('kart')) {\n      const pi = ctx.getOn(e, 'PlayerInput');\n      if (pi && (pi.owner === 'local' || pi.owner === ctx.net.localId)) { target = e; break; }\n    }\n    if (target === undefined) return;\n    const kt = ctx.getOn(target, 'Transform');\n    const rb = ctx.getOn(target, 'RigidBody3D');\n    const speed = rb ? Math.hypot(rb.velocity.x, rb.velocity.z) : 0;\n    // Kart forward in the XZ plane (yaw rotation of +Z).\n    const q = kt.rotation;\n    const fx = 2 * (q.x * q.z + q.w * q.y), fz = 1 - 2 * (q.x * q.x + q.y * q.y);\n    const dist = ctx.props.distance + speed * 0.08;\n    const tx = kt.x - fx * dist, ty = kt.y + ctx.props.height, tz = kt.z - fz * dist;\n    const t = ctx.transform;\n    const k = ctx.props.smoothing;\n    t.setPosition(ctx.math.damp(t.x, tx, k, dt), ctx.math.damp(t.y, ty, k, dt), ctx.math.damp(t.z, tz, k, dt));\n    t.lookAt(new ctx.math.Vec3(kt.x + fx * ctx.props.lookAhead, kt.y + 1, kt.z + fz * ctx.props.lookAhead));\n  },\n});\n"
+    },
+    {
+      "name": "Checkpoint",
+      "source": "// Checkpoint marker data (read by the Kart script) plus a gentle bar pulse.\ndefineScript({\n  name: 'Checkpoint',\n  description: 'Ordered race checkpoint; index 0 is the start/finish line.',\n  props: {\n    index: { type: 'integer', default: 0, min: 0 },\n    halfX: { type: 'number', default: 7 },\n    halfZ: { type: 'number', default: 0.8 },\n    heading: { type: 'number', default: 0, label: 'Respawn heading (rad)' },\n  },\n  onUpdate(ctx) {\n    for (const child of ctx.world.getChildren(ctx.entity)) {\n      if (ctx.nameOf(child) !== 'Bar') continue;\n      const mr = ctx.getOn(child, 'MeshRenderer');\n      if (mr) mr.emissive.a = 1, mr.opacity = 0.55 + Math.sin(ctx.time.elapsed * 3 + ctx.props.index) * 0.25;\n    }\n  },\n});\n"
+    },
+    {
+      "name": "GameManager",
+      "source": "// Race director: puts one Kart per player on the grid, runs the countdown,\n// tracks laps and declares the winner.\nfunction hud(ctx) { return ctx.engine.canvas ? ctx.engine.hud : null; }\n\nconst COLORS = ['#ff7a3d', '#4cc2ff', '#8b7dff', '#ffd166', '#06d6a0', '#ef476f'];\n\ndefineScript({\n  name: 'GameManager',\n  description: 'Grid, countdown, laps and winner.',\n  props: {\n    laps: { type: 'integer', default: 3, min: 1, max: 20 },\n    countdown: { type: 'integer', default: 3, min: 0, max: 10 },\n    gridX: { type: 'number', default: 28, label: 'Grid centre X' },\n    gridZ: { type: 'number', default: 4, label: 'Grid centre Z' },\n    heading: { type: 'number', default: 3.14159, label: 'Start heading (rad)' },\n  },\n  onStart(ctx) {\n    const s = ctx.state;\n    s.players = {};\n    s.count = 0;\n    s.unsub = [];\n    s.finished = false;\n    if (ctx.net.isHost) {\n      this.addPlayer(ctx, ctx.net.localId);\n      const sync = ctx.net.hub.sync;\n      if (sync) {\n        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);\n        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));\n        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));\n      }\n      this.startCountdown(ctx);\n    }\n    this.drawStandings(ctx);\n  },\n  onDestroy(ctx) {\n    for (const off of ctx.state.unsub) off();\n    const h = hud(ctx);\n    if (h) { h.remove('countdown'); h.remove('standings'); h.remove('winner'); h.remove('hint'); }\n  },\n  gridSlot(ctx, index) {\n    // Two columns, staggered rows, behind the start line.\n    const col = index % 2, row = Math.floor(index / 2);\n    return { x: ctx.props.gridX + (col === 0 ? -2.5 : 2.5), y: 0.6, z: ctx.props.gridZ + row * 3.5 + col * 1.5 };\n  },\n  addPlayer(ctx, peerId) {\n    const s = ctx.state;\n    if (s.players[peerId]) return;\n    const index = s.count++;\n    const slot = this.gridSlot(ctx, index);\n    const entity = ctx.net.spawn('Kart', { ownerId: peerId, position: slot });\n    const pi = ctx.getOn(entity, 'PlayerInput');\n    if (pi) pi.owner = peerId;\n    const ni = ctx.getOn(entity, 'NetworkIdentity');\n    if (ni) ni.ownerId = peerId;\n    const name = ctx.getOn(entity, 'Name');\n    if (name) name.name = `Kart ${peerId}`;\n    const script = ctx.getOn(entity, 'Script');\n    script.props.color = COLORS[index % COLORS.length];\n    script.props.label = `P${index + 1}`;\n    script.props.heading = ctx.props.heading;\n    script.props.laps = ctx.props.laps;\n    s.players[peerId] = { entity, index, lap: 0, best: 0 };\n    if (s.raceStarted) ctx.sendTo(entity, 'go');\n  },\n  removePlayer(ctx, peerId) {\n    const p = ctx.state.players[peerId];\n    if (!p) return;\n    if (ctx.world.isAlive(p.entity)) {\n      const sync = ctx.net.hub.sync;\n      if (sync) sync.despawn(p.entity); else ctx.destroy(p.entity);\n    }\n    delete ctx.state.players[peerId];\n  },\n  startCountdown(ctx) {\n    const s = ctx.state;\n    s.raceStarted = false;\n    let n = ctx.props.countdown;\n    const h = hud(ctx);\n    const tick = () => {\n      if (n > 0) {\n        if (h) h.text('countdown', String(n), { anchor: 'center' }).style.fontSize = '72px';\n        ctx.audio.play('beep', { volume: 0.5 });\n        n--;\n        ctx.timer(1, tick);\n      } else {\n        if (h) { h.text('countdown', 'GO!', { anchor: 'center' }); ctx.timer(1, () => h.remove('countdown')); }\n        ctx.audio.play('go', { volume: 0.6 });\n        s.raceStarted = true;\n        ctx.send('go', {});\n      }\n    };\n    tick();\n  },\n  onMessage(ctx, name, data) {\n    if (!ctx.net.isHost) return;\n    if (name === 'lapDone') {\n      const p = ctx.state.players[data.peer];\n      if (!p) return;\n      p.lap = data.lap;\n      p.best = p.best ? Math.min(p.best, data.time) : data.time;\n      this.drawStandings(ctx);\n      if (p.lap >= ctx.props.laps && !ctx.state.finished) this.finish(ctx, data.peer);\n    }\n  },\n  finish(ctx, peerId) {\n    const s = ctx.state;\n    s.finished = true;\n    const p = s.players[peerId];\n    const h = hud(ctx);\n    if (h) h.panel('winner', `P${p.index + 1} wins!`, `Best lap ${p.best.toFixed(2)}s\\nRestarting in 6s`);\n    ctx.audio.play('go', { volume: 0.6 });\n    ctx.timer(6, () => {\n      for (const q of Object.values(s.players)) {\n        q.lap = 0; q.best = 0;\n        const slot = this.gridSlot(ctx, q.index);\n        ctx.sendTo(q.entity, 'resetTo', slot);\n      }\n      s.finished = false;\n      if (h) h.remove('winner');\n      this.drawStandings(ctx);\n      this.startCountdown(ctx);\n    });\n  },\n  drawStandings(ctx) {\n    const h = hud(ctx);\n    if (!h) return;\n    const rows = Object.values(ctx.state.players).sort((a, b) => b.lap - a.lap || (a.best || 1e9) - (b.best || 1e9))\n      .map((p, i) => `${i + 1}. P${p.index + 1}  lap ${p.lap}/${ctx.props.laps}${p.best ? `  best ${p.best.toFixed(2)}s` : ''}`);\n    h.text('standings', rows.join('\\n'), { anchor: 'top-right', y: 48 });\n    h.text('hint', 'W/S throttle · A/D steer · E reset kart', { anchor: 'bottom-right' });\n  },\n});\n"
+    },
+    {
+      "name": "Kart",
+      "source": "// Arcade kart on top of RigidBody3D: throttle along the heading, steering\n// scaled by speed, lateral grip, checkpoint/lap tracking and a per-player HUD.\nfunction hud(ctx) { return ctx.engine.canvas ? ctx.engine.hud : null; }\n\ndefineScript({\n  name: 'Kart',\n  description: 'Drivable kart with lap timing.',\n  props: {\n    accel: { type: 'number', default: 18, min: 1, max: 100 },\n    brake: { type: 'number', default: 30, min: 1, max: 200 },\n    maxSpeed: { type: 'number', default: 22, min: 1, max: 100 },\n    reverseSpeed: { type: 'number', default: 7, min: 0, max: 50 },\n    turnSpeed: { type: 'number', default: 2.4, min: 0.1, max: 10, label: 'Turn rate (rad/s)' },\n    grip: { type: 'number', default: 12, min: 0, max: 60, label: 'Grip (velocity blend rate)' },\n    heading: { type: 'number', default: 3.14159 },\n    laps: { type: 'integer', default: 3 },\n    color: { type: 'string', default: '#ff7a3d', label: 'Colour (hex)' },\n    label: { type: 'string', default: 'P1' },\n  },\n  onStart(ctx) {\n    const s = ctx.state;\n    s.h = ctx.props.heading;\n    s.go = false;\n    s.next = 1;\n    s.lap = 0;\n    s.lapStart = 0;\n    s.best = 0;\n    s.steer = 0;\n    s.speed = 0;\n    s.lastCheckpoint = { x: ctx.transform.x, y: ctx.transform.y, z: ctx.transform.z, h: s.h };\n    ctx.transform.setEuler(0, s.h, 0);\n    this.applyLook(ctx);\n    s.offCollision = ctx.physics3d.events.on('collisionEnter', (ev) => {\n      if (ev.a !== ctx.entity && ev.b !== ctx.entity) return;\n      const rb = ctx.get('RigidBody3D');\n      const sp = Math.hypot(rb.velocity.x, rb.velocity.z);\n      if (sp > 4) ctx.audio.play('hit', { volume: Math.min(1, sp / 20), pitchVariation: 0.15 });\n    });\n  },\n  onDestroy(ctx) {\n    if (ctx.state.offCollision) ctx.state.offCollision();\n    const h = hud(ctx);\n    if (h && this.isLocal(ctx)) h.remove('lap');\n  },\n  onReload(ctx) { this.applyLook(ctx); },\n  applyLook(ctx) {\n    for (const child of ctx.world.getChildren(ctx.entity)) {\n      const n = ctx.nameOf(child);\n      const mr = ctx.getOn(child, 'MeshRenderer');\n      if (mr && (n === 'Body' || n === 'Nose')) mr.color.setHex(ctx.props.color);\n    }\n  },\n  isLocal(ctx) {\n    const pi = ctx.playerInput;\n    return !!pi && (pi.owner === 'local' || pi.owner === ctx.net.localId);\n  },\n  forward(ctx) { return { x: Math.sin(ctx.state.h), z: Math.cos(ctx.state.h) }; },\n\n  onMessage(ctx, name, data) {\n    const s = ctx.state;\n    if (name === 'go') { s.go = true; s.lapStart = ctx.time.elapsed; s.next = 1; s.lap = 0; }\n    else if (name === 'resetTo') { this.teleport(ctx, data.x, data.y, data.z, ctx.props.heading); s.go = false; s.lap = 0; s.next = 1; s.best = 0; }\n  },\n  teleport(ctx, x, y, z, h) {\n    const rb = ctx.get('RigidBody3D');\n    rb.velocity.set(0, 0, 0);\n    ctx.state.speed = 0;\n    ctx.state.h = h;\n    ctx.transform.setPosition(x, y, z);\n    ctx.transform.setEuler(0, h, 0);\n  },\n\n  onOwnerInput(ctx, snap, dt) {\n    const s = ctx.state;\n    const rb = ctx.get('RigidBody3D');\n    if (snap.pressed.includes('action')) {\n      const c = s.lastCheckpoint;\n      this.teleport(ctx, c.x, c.y + 0.5, c.z, c.h);\n    }\n    if (!s.go) return;\n    const throttle = snap.axes.moveY || 0;\n    const steer = snap.axes.moveX || 0;\n    const f = this.forward(ctx);\n    const actual = rb.velocity.x * f.x + rb.velocity.z * f.z;   // measured speed along the heading\n    if (Math.abs(actual - s.speed) > 5) s.speed = actual;         // we hit something: accept the new speed\n    if (throttle > 0.05) s.speed = ctx.math.moveToward(s.speed, ctx.props.maxSpeed * throttle, (s.speed < 0 ? ctx.props.brake : ctx.props.accel) * dt);\n    else if (throttle < -0.05) s.speed = ctx.math.moveToward(s.speed, ctx.props.reverseSpeed * throttle, (s.speed > 0 ? ctx.props.brake : ctx.props.accel) * dt);\n    else s.speed = ctx.math.moveToward(s.speed, 0, 5 * dt);\n    // Steering authority grows with speed and flips in reverse.\n    const speedFactor = ctx.math.clamp(Math.abs(s.speed) / 6, 0, 1) * Math.sign(s.speed || 1);\n    s.h -= steer * ctx.props.turnSpeed * speedFactor * dt;\n    s.steer = ctx.math.damp(s.steer, steer, 10, dt);\n    const nf = this.forward(ctx);\n    // Blend the horizontal velocity toward the heading: high grip = tight, low grip = drifty.\n    const k = Math.min(1, ctx.props.grip * dt);\n    rb.velocity.x += (nf.x * s.speed - rb.velocity.x) * k;\n    rb.velocity.z += (nf.z * s.speed - rb.velocity.z) * k;\n    ctx.transform.setEuler(0, s.h, 0);\n  },\n  onFixedUpdate(ctx) {\n    const s = ctx.state;\n    const t = ctx.transform;\n    // Body roll from steering.\n    const body = ctx.world.getChildren(ctx.entity).find((c) => ctx.nameOf(c) === 'Body');\n    if (body !== undefined) ctx.getOn(body, 'Transform').setEuler(0, 0, -s.steer * 0.12);\n    if (t.y < -5) { const c = s.lastCheckpoint; this.teleport(ctx, c.x, c.y + 0.5, c.z, c.h); }\n    if (!s.go) return;\n    for (const cp of ctx.findAll('checkpoint')) {\n      const p = ctx.getOn(cp, 'Script').props;\n      const ct = ctx.getOn(cp, 'Transform');\n      if (Math.abs(t.x - ct.x) > p.halfX || Math.abs(t.z - ct.z) > p.halfZ) continue;\n      if (p.index !== s.next) continue;\n      const count = ctx.findAll('checkpoint').length;\n      s.next = (p.index + 1) % count;\n      s.lastCheckpoint = { x: ct.x, y: ct.y, z: ct.z, h: p.heading };\n      if (p.index === 0) {\n        s.lap++;\n        const time = ctx.time.elapsed - s.lapStart;\n        s.lapStart = ctx.time.elapsed;\n        s.best = s.best ? Math.min(s.best, time) : time;\n        ctx.audio.play('lap', { volume: 0.6 });\n        ctx.send('lapDone', { peer: ctx.net.owner(), lap: s.lap, time });\n      } else ctx.audio.play('checkpoint', { volume: 0.4 });\n    }\n  },\n  onUpdate(ctx) {\n    if (!this.isLocal(ctx) || ctx.time.frame % 6 !== 0) return;\n    const h = hud(ctx);\n    if (!h) return;\n    const s = ctx.state;\n    const rb = ctx.get('RigidBody3D');\n    const kmh = Math.round(Math.hypot(rb.velocity.x, rb.velocity.z) * 6);\n    const lapTime = s.go ? (ctx.time.elapsed - s.lapStart).toFixed(1) : '0.0';\n    h.text('lap', `Lap ${Math.min(s.lap + 1, ctx.props.laps)} / ${ctx.props.laps}   ${lapTime}s${s.best ? `   best ${s.best.toFixed(2)}s` : ''}\\n${kmh} km/h`, { anchor: 'top-left' });\n  },\n});\n"
+    }
+  ],
+  "prefabs": [
+    {
+      "version": 1,
+      "name": "Kart",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Kart"
+              }
+            },
+            {
+              "type": "RigidBody3D",
+              "data": {
+                "bodyType": "dynamic",
+                "mass": 1,
+                "restitution": 0.15,
+                "friction": 0,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "linearDamping": 0,
+                "layer": 0,
+                "collisionMask": 4294967295
+              }
+            },
+            {
+              "type": "BoxCollider3D",
+              "data": {
+                "size": {
+                  "x": 1.5,
+                  "y": 0.8,
+                  "z": 2.4
+                },
+                "offset": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "isTrigger": false
+              }
+            },
+            {
+              "type": "PlayerInput",
+              "data": {
+                "owner": "local",
+                "coOwners": [],
+                "mergeStrategy": "average"
+              }
+            },
+            {
+              "type": "NetworkIdentity",
+              "data": {
+                "netId": 0,
+                "ownerId": "host",
+                "authority": "host",
+                "prefab": "Kart",
+                "sharedWith": [],
+                "replicate": true
+              }
+            },
+            {
+              "type": "NetTransform",
+              "data": {
+                "syncPosition": true,
+                "syncRotation": true,
+                "syncScale": false,
+                "interpolationDelay": 2,
+                "extrapolation": 0.1,
+                "positionThreshold": 0.001,
+                "rotationThreshold": 0.001,
+                "teleportDistance": 5
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "Kart",
+                "props": {},
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "kart"
+                ]
+              }
+            }
+          ],
+          "name": "Kart"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1.5,
+                  "y": 0.5,
+                  "z": 2.4
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Body"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0.2,
+                "roughness": 0.35,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Body",
+          "parent": 1
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.45,
+                  "z": -0.3
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 0.5,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cabin"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.10196078431372549,
+                  "g": 0.13333333333333333,
+                  "b": 0.2196078431372549,
+                  "a": 1
+                },
+                "metallic": 0.4,
+                "roughness": 0.2,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Cabin",
+          "parent": 1
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0.15,
+                  "z": 1.35
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.8,
+                  "y": 0.25,
+                  "z": 0.5
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Nose"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.35,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Nose",
+          "parent": 1
+        },
+        {
+          "id": 5,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -0.8,
+                  "y": -0.1,
+                  "z": 0.8
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.35,
+                  "y": 0.6,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Wheel 1"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.08235294117647059,
+                  "g": 0.09019607843137255,
+                  "b": 0.11764705882352941,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.9,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Wheel 1",
+          "parent": 1
+        },
+        {
+          "id": 6,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0.8,
+                  "y": -0.1,
+                  "z": 0.8
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.35,
+                  "y": 0.6,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Wheel 2"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.08235294117647059,
+                  "g": 0.09019607843137255,
+                  "b": 0.11764705882352941,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.9,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Wheel 2",
+          "parent": 1
+        },
+        {
+          "id": 7,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -0.8,
+                  "y": -0.1,
+                  "z": -0.8
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.35,
+                  "y": 0.6,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Wheel 3"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.08235294117647059,
+                  "g": 0.09019607843137255,
+                  "b": 0.11764705882352941,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.9,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Wheel 3",
+          "parent": 1
+        },
+        {
+          "id": 8,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0.8,
+                  "y": -0.1,
+                  "z": -0.8
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 0.35,
+                  "y": 0.6,
+                  "z": 0.6
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Wheel 4"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 0.08235294117647059,
+                  "g": 0.09019607843137255,
+                  "b": 0.11764705882352941,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.9,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Wheel 4",
+          "parent": 1
+        }
+      ]
+    }
+  ],
+  "assets": {
+    "assets": [
+      {
+        "id": "beep",
+        "kind": "audio",
+        "url": "assets/beep.wav"
+      },
+      {
+        "id": "go",
+        "kind": "audio",
+        "url": "assets/go.wav"
+      },
+      {
+        "id": "hit",
+        "kind": "audio",
+        "url": "assets/hit.wav"
+      },
+      {
+        "id": "lap",
+        "kind": "audio",
+        "url": "assets/lap.wav"
+      },
+      {
+        "id": "checkpoint",
+        "kind": "audio",
+        "url": "assets/checkpoint.wav"
+      }
+    ]
+  },
+  "settings": {
+    "renderer": "3d",
+    "pixelsPerUnit": 32,
+    "pixelPerfect": false,
+    "fixedRate": 60,
+    "viewport": {
+      "width": 960,
+      "height": 540
+    },
+    "physics": {
+      "gravity": {
+        "x": 0,
+        "y": -20
+      },
+      "gravity3d": {
+        "x": 0,
+        "y": -25,
+        "z": 0
+      }
+    },
+    "network": {
+      "mode": "host-authoritative",
+      "maxPlayers": 6,
+      "tickRate": 20
+    },
+    "multiUser": {
+      "sharedControl": false,
+      "mergeStrategy": "average"
+    },
+    "input": {
+      "actions": {
+        "jump": [
+          "Space",
+          "KeyW",
+          "ArrowUp",
+          "GamepadA",
+          "Touch:jump"
+        ],
+        "fire": [
+          "MouseLeft",
+          "KeyJ",
+          "GamepadX",
+          "Touch:fire"
+        ],
+        "action": [
+          "KeyE",
+          "Enter",
+          "GamepadB",
+          "Touch:action"
+        ],
+        "pause": [
+          "Escape",
+          "GamepadStart"
+        ]
+      },
+      "axes": {
+        "moveX": {
+          "negative": [
+            "KeyA",
+            "ArrowLeft",
+            "GamepadDpadLeft"
+          ],
+          "positive": [
+            "KeyD",
+            "ArrowRight",
+            "GamepadDpadRight"
+          ],
+          "gamepadAxis": 0,
+          "touchJoystick": "x"
+        },
+        "moveY": {
+          "negative": [
+            "KeyS",
+            "ArrowDown",
+            "GamepadDpadDown"
+          ],
+          "positive": [
+            "KeyW",
+            "ArrowUp",
+            "GamepadDpadUp"
+          ],
+          "gamepadAxis": 1,
+          "invertGamepad": true,
+          "touchJoystick": "y"
+        }
+      }
+    },
+    "touchControls": true,
+    "touchButtons": [
+      "action"
+    ]
+  }
+}

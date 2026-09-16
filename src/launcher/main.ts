@@ -7,15 +7,33 @@ import { VERSION } from '../index';
 /** One entry of `public/demos/index.json` (written by the demos worker). */
 interface DemoEntry {
   id: string;
-  title: string;
+  title?: string;
+  /** Alternative to `title`. */
+  name?: string;
   description: string;
   /** Path relative to `demos/`. */
   thumbnail?: string;
   renderer?: '2d' | '3d';
   /** Supports "Play Multiplayer". */
   multiplayer?: boolean;
-  players?: string;
+  /** Player count as free text ("2-4") or a range. */
+  players?: string | { min: number; max: number };
   tags?: string[];
+  /** Short control hints shown on the card. */
+  controls?: string[];
+  featured?: boolean;
+  /** Starter template (what "New project" copies). */
+  template?: boolean;
+}
+
+function demoTitle(d: DemoEntry): string {
+  return d.title ?? d.name ?? d.id;
+}
+
+function playersText(p: DemoEntry['players']): string {
+  if (!p) return '';
+  if (typeof p === 'string') return p;
+  return p.min === p.max ? `${p.max} player${p.max === 1 ? '' : 's'}` : `${p.min}-${p.max} players`;
 }
 
 interface DemoIndex {
@@ -59,6 +77,8 @@ function card(opts: {
   thumbnail?: string;
   badges: { text: string; cls?: string }[];
   buttons: { label: string; primary?: boolean; onClick: () => void; aria?: string }[];
+  /** Optional extra line under the description (e.g. controls). */
+  note?: string;
 }): HTMLElement {
   const c = el('article', 'card');
   const thumb = el('div', 'thumb');
@@ -74,6 +94,12 @@ function card(opts: {
   const body = el('div', 'body');
   body.appendChild(el('h3', undefined, opts.title));
   body.appendChild(el('p', 'desc', opts.description));
+  if (opts.note) {
+    const note = el('p', 'desc note', opts.note);
+    note.style.opacity = '0.75';
+    note.style.fontSize = '12px';
+    body.appendChild(note);
+  }
   const meta = el('div', 'meta');
   for (const b of opts.badges) meta.appendChild(el('span', `badge ${b.cls ?? ''}`.trim(), b.text));
   body.appendChild(meta);
@@ -90,27 +116,33 @@ function card(opts: {
 }
 
 function demoCard(d: DemoEntry): HTMLElement {
+  const title = demoTitle(d);
+  const players = playersText(d.players);
   const badges: { text: string; cls?: string }[] = [{ text: d.renderer === '3d' ? '3D' : '2D', cls: d.renderer === '3d' ? 'threed' : '' }];
-  if (d.multiplayer) badges.push({ text: d.players ? `Multiplayer ${d.players}` : 'Multiplayer', cls: 'net' });
+  if (d.featured) badges.push({ text: 'Featured', cls: 'featured' });
+  if (d.template) badges.push({ text: 'Template' });
+  if (d.multiplayer) badges.push({ text: players ? `Multiplayer ${players}` : 'Multiplayer', cls: 'net' });
+  else if (players) badges.push({ text: players });
   for (const t of d.tags ?? []) badges.push({ text: t });
   const buttons = [
-    { label: 'Play', primary: true, onClick: () => { location.href = playUrl(d.id); }, aria: `Play ${d.title}` },
+    { label: 'Play', primary: true, onClick: () => { location.href = playUrl(d.id); }, aria: `Play ${title}` },
   ];
   if (d.multiplayer) {
     buttons.push({
       label: 'Play Multiplayer',
       primary: false,
       onClick: () => { location.href = playUrl(d.id, { room: roomId() }); },
-      aria: `Play ${d.title} in a new multiplayer room`,
+      aria: `Play ${title} in a new multiplayer room`,
     });
   }
-  buttons.push({ label: 'Open in Editor', primary: false, onClick: () => { location.href = editorUrl(d.id); }, aria: `Open ${d.title} in the editor` });
+  buttons.push({ label: 'Open in Editor', primary: false, onClick: () => { location.href = editorUrl(d.id); }, aria: `Open ${title} in the editor` });
   return card({
-    title: d.title,
+    title,
     description: d.description,
     thumbnail: d.thumbnail ? `./demos/${d.id}/${d.thumbnail}` : undefined,
     badges,
     buttons,
+    note: d.controls?.length ? d.controls.join(' · ') : undefined,
   });
 }
 

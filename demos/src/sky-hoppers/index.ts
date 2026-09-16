@@ -161,7 +161,7 @@ export function build(): DemoBundle {
     }, { parent: props });
   });
   b.entity('Title', {
-    Transform: { position: { x: L.spawn.x + 4, y: L.spawn.y + 4.5, z: 0 } },
+    Transform: { position: { x: L.spawn.x + 6, y: L.spawn.y + 6, z: 0 } },
     Text: { text: 'Sky Hoppers', size: 0.9, bold: true, color: hex('#ffffff'), outlineWidth: 0.06, outline: hex('#1a2238') },
   });
   const scene = b.save('Level 1', { gravity: { x: 0, y: -32 } });

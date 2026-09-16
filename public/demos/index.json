@@ -49,6 +49,75 @@
       "featured": true
     },
     {
+      "id": "paddle-rush",
+      "name": "Paddle Rush",
+      "title": "Paddle Rush",
+      "description": "Air hockey with an AI opponent when you are alone. In team mode everyone on a side steers the same paddle: inputs are averaged in real time.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 8
+      },
+      "tags": [
+        "sports",
+        "shared-control",
+        "ai"
+      ],
+      "controls": [
+        "WASD / arrows: move paddle"
+      ],
+      "featured": true
+    },
+    {
+      "id": "cube-racers",
+      "name": "Cube Racers",
+      "title": "Cube Racers",
+      "description": "WebGL arcade racer for 1-6 players: drive kart cubes around a walled circuit with cones and chicanes, chase camera, checkpoints and lap timing.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "3d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 6
+      },
+      "tags": [
+        "racing",
+        "webgl",
+        "3d-physics"
+      ],
+      "controls": [
+        "W/S: throttle",
+        "A/D: steer",
+        "E / Enter: reset to checkpoint"
+      ],
+      "featured": true
+    },
+    {
+      "id": "tower-together",
+      "name": "Tower Together",
+      "title": "Tower Together",
+      "description": "Co-op tower defence for 1-4 players: click or tap to build turrets along the road, share one purse of gold and hold the base through escalating waves.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 4
+      },
+      "tags": [
+        "tower-defense",
+        "co-op",
+        "pointer",
+        "shared-control"
+      ],
+      "controls": [
+        "Click / tap: build tower"
+      ],
+      "featured": true
+    },
+    {
       "id": "starter-2d",
       "name": "Starter 2D",
       "title": "Starter 2D",
