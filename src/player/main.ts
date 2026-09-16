@@ -83,10 +83,16 @@ async function main(): Promise<void> {
         scene: params.get('scene') ?? undefined,
       });
       if (room && project.settings.network.mode !== 'none') {
-        // The networking worker installs a transport + NetSync here (see src/net/README.md).
-        // Until then we connect the NullTransport so scripts see a consistent room id.
-        await engine.net.transport.connect({ roomId: room });
-        engine.hud.text('room', `Room ${room} · ${engine.net.isHost ? 'host' : 'client'}`, { anchor: 'top-left' });
+        // Multiplayer: transport from ?net= (peer | local | ws), room from ?room=, name from ?name=.
+        // installNetworking connects, installs the NetSync for the project's mode and shows the lobby
+        // (with a "Play offline" fallback); see src/net/README.md and docs/MULTIPLAYER.md.
+        const { installNetworking, parseNetParams } = await import('../net');
+        await installNetworking(engine, {
+          params: parseNetParams(location.search),
+          project,
+          container: app,
+          onOffline: () => engine.hud.text('room', 'Playing offline', { anchor: 'top-left' }),
+        });
       }
     } else {
       const is3d = rendererParam === '3d';

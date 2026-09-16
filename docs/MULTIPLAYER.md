@@ -1,0 +1,141 @@
+# Making a game multiplayer in 5 steps
+
+Forge games are multiplayer-ready by construction: input is a serializable
+`InputSnapshot`, entities are addressed by `NetworkIdentity`, and the host's
+browser runs the authoritative simulation. Nothing to deploy for the default
+peer-to-peer transport. Implementation reference: `src/net/README.md`.
+
+## 1. Turn networking on in the project
+
+In project settings (or `project.json`):
+
+```json
+"network": { "mode": "host-authoritative", "maxPlayers": 8, "tickRate": 20 },
+"multiUser": { "sharedControl": true, "mergeStrategy": "average" }
+```
+
+`mode` can be `host-authoritative` (recommended) or `lockstep` (deterministic;
+everyone simulates; the host presses Start when all players are in).
+
+## 2. Give replicated things a `NetworkIdentity`
+
+Any entity that other players must see needs `NetworkIdentity` (and usually
+`NetTransform` for smooth interpolation). Scene entities get stable ids
+automatically. Put a player avatar in a **prefab** with `Transform`,
+`NetworkIdentity`, `NetTransform`, `PlayerInput`, your `Script` and (for
+platformers) `RigidBody2D` + `CharacterController2D`.
+
+Game state beyond the transform (health, score) replicates when you mark the
+component: in a built-in script `markReplicated('Health')` from the engine
+API, or list types on the entity: `NetworkIdentity.syncComponents = ['Health']`.
+
+## 3. Drive players with `onOwnerInput`
+
+```js
+defineScript({
+  name: 'Player',
+  onOwnerInput(ctx, input, dt) {
+    const rb = ctx.get('RigidBody2D');
+    rb.velocity.x = input.axes.moveX * 6;
+    if (input.pressed.includes('jump')) rb.velocity.y = 12;
+  },
+});
+```
+
+The same code runs offline and online. Online, the host applies each player's
+snapshot to the `PlayerInput` that player owns before scripts run; clients
+only send input and render the interpolated result.
+
+## 4. Spawn one avatar per player (host)
+
+Add a `GameManager` script on an empty scene entity:
+
+```js
+defineScript({
+  name: 'GameManager',
+  onStart(ctx) {
+    const sync = ctx.net.hub.sync;
+    if (!sync) { ctx.net.spawn('Player'); return; }        // offline: just a local player
+    const spawned = {};
+    const spawnFor = (peerId) => {
+      if (!ctx.net.isHost || spawned[peerId]) return;      // only the host spawns
+      spawned[peerId] = ctx.net.spawn('Player', { ownerId: peerId, position: { x: Object.keys(spawned).length * 2, y: 1 } });
+    };
+    for (const p of sync.players()) spawnFor(p.peerId);     // players already here (host itself, or after migration)
+    sync.on('playerJoined', (e) => spawnFor(e.peerId));
+    sync.on('playerLeft', (e) => { const ent = spawned[e.peerId]; delete spawned[e.peerId]; if (ent && ctx.net.isHost) sync.despawn(ent); });
+  },
+});
+```
+
+Or the one-liner equivalent from a built-in script or `main.ts`:
+`(engine.net.sync as HostAuthoritativeSync).spawnPlayers('Player', { position: (i) => ({ x: i * 2, y: 1 }) })`.
+
+Check `ctx.net.isHost` inside handlers (not once at start): after host
+migration the new host's `GameManager` starts receiving `playerJoined`/
+`playerLeft` and takes over spawning.
+
+Useful `ScriptContext.net` members: `localId`, `isHost`, `online`,
+`owner()`, `isOwner()`, `spawn(prefab, { ownerId, position })`,
+`rpc(name, args, target)` and `hub` (`engine.net`): `hub.sync.on(...)`,
+`hub.sync.players()`, `hub.channel('chat')`, `hub.presence`, `hub.stats`.
+
+## 5. Share a link
+
+Open `play.html?project=<id>&room=ABC123` and press **Copy invite link** in
+the lobby. Friends open the link and join; the first one in the room hosts.
+
+| Situation | URL parameters |
+| --- | --- |
+| Different devices, no server (default) | `&room=ABC123` (WebRTC through public PeerJS signalling) |
+| Two tabs in the same browser | `&room=ABC123&net=local` |
+| Behind strict NATs / you run a server | `&room=ABC123&net=ws&server=wss://your-host/ws` (see `server/README.md`) |
+| Pick a name | `&name=Zoe` |
+
+The lobby shows the roster with host badge and RTT, connection errors and a
+**Play offline** button.
+
+## Shared control (several people, one entity)
+
+Let two players steer one vehicle: on the host call
+`sync.shareControl(entity, peerId, true)` (or author `PlayerInput.coOwners`).
+Each step the host merges the controllers' snapshots with
+`PlayerInput.mergeStrategy`:
+
+- `average`: axes averaged, so opposite pushes cancel (co-op steering).
+- `first-wins`: the first non-zero contributor wins (owner, then co-owners).
+- `additive`: summed and clamped (pushing together goes faster).
+
+Buttons are OR-ed in every mode. Scripts see one merged `onOwnerInput`.
+
+## RPCs and ownership
+
+- `ctx.net.rpc('explode', [x, y], 'all')` from an entity script reaches
+  `onRpc(ctx, name, args, from)` on that entity everywhere. Targets: `'host'`
+  (default), `'all'`, `'others'`, or a peer id. Clients go through the host.
+- `sync.setOwner(entity, peerId)` hands an entity to another player (updates
+  `PlayerInput.owner`); `authority: 'owner'` at spawn lets the owner simulate
+  it locally for lag-free movement, with the host relaying its state.
+
+## Testing without a browser
+
+```ts
+const net = new MemoryNetwork({ latency: 40, loss: 0.1 });
+const host = Engine.create(null, { audio: false }); host.net.setTransport(net.createTransport());
+await host.net.transport.connect({ roomId: 'r' });
+host.net.setSync(new HostAuthoritativeSync(host, { autoInput: false })); host.net.sync!.start();
+// ...same for a client, then: host.step(); client.step(); net.flush();
+```
+
+See `tests/net.test.ts` for complete examples of every feature.
+
+## Limits and notes
+
+- Host-authoritative: the host must stay online; when it leaves, the
+  transport elects a new host who resumes from the last replicated state
+  (entities the old host owned are handed to the new host; your
+  `playerLeft` handler decides whether to despawn them).
+- Lockstep needs all players present before Start; late join is refused.
+- WebRTC through public signalling can fail behind symmetric NATs; fall back
+  to `net=ws` or configure a TURN server via `PeerTransportOptions.iceServers`.
+- Snapshot precision is 1 mm for positions and about 0.003° for rotations.

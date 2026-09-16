@@ -23,6 +23,14 @@ export class NetworkIdentity extends Component {
   sharedWith: string[] = [];
   /** Replicate at all (false = local-only decoration on a networked entity). */
   replicate = true;
+  /**
+   * Extra component types on this entity whose serializable fields replicate
+   * host → clients (in addition to types registered globally with
+   * `markReplicated`). Example: `['Health', 'Score']`.
+   */
+  syncComponents: string[] = [];
+  /** True when this entity was spawned by the sync layer (vs. loaded with the scene). */
+  spawned = false;
 }
 registerComponent(NetworkIdentity, {
   category: 'Networking',
@@ -32,6 +40,8 @@ registerComponent(NetworkIdentity, {
     netId: { type: 'integer', readonly: true },
     authority: { type: 'enum', options: ['host', 'owner'] },
     sharedWith: { type: 'json' },
+    syncComponents: { type: 'json', description: 'Component types replicated from the authority.' },
+    spawned: { type: 'boolean', transient: true, hidden: true },
   },
 });
 
