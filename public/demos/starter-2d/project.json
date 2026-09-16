@@ -1,0 +1,802 @@
+{
+  "id": "starter-2d",
+  "name": "Starter 2D",
+  "version": 1,
+  "projectVersion": "0.1.0",
+  "description": "A player, a few platforms and a following camera. The blank canvas for a new 2D game.",
+  "author": "Forge Engine demos",
+  "thumbnail": "thumbnail.svg",
+  "createdAt": "2026-09-16T00:00:00.000Z",
+  "updatedAt": "2026-09-16T00:00:00.000Z",
+  "scenes": [
+    {
+      "version": 1,
+      "name": "Main",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 2,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Camera"
+              }
+            },
+            {
+              "type": "Camera2D",
+              "data": {
+                "zoom": 0.9,
+                "active": true,
+                "priority": 0,
+                "follow": 6,
+                "followSmoothing": 6,
+                "followOffset": {
+                  "x": 0,
+                  "y": 1.5
+                },
+                "bounds": {
+                  "x": -14,
+                  "y": -6,
+                  "width": 28,
+                  "height": 20
+                },
+                "backgroundColor": {
+                  "r": 0.07058823529411765,
+                  "g": 0.09019607843137255,
+                  "b": 0.16470588235294117,
+                  "a": 1
+                },
+                "ambientLight": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "pixelPerfect": false,
+                "shakeDecay": 5
+              }
+            },
+            {
+              "type": "AudioListener",
+              "data": {
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Camera"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": -1,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ground"
+              }
+            },
+            {
+              "type": "RigidBody2D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.1,
+                "friction": 0.8,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0.05,
+                "fixedRotation": false,
+                "layer": 0,
+                "collisionMask": 4294967295,
+                "bullet": false
+              }
+            },
+            {
+              "type": "BoxCollider2D",
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "isTrigger": false,
+                "restitution": -1,
+                "friction": -1,
+                "width": 28,
+                "height": 2
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 28,
+                "height": 2,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.16470588235294117,
+                  "g": 0.2,
+                  "b": 0.3137254901960784,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -5,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Ground"
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -6,
+                  "y": 1.5,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Platform 1"
+              }
+            },
+            {
+              "type": "RigidBody2D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.1,
+                "friction": 0.8,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0.05,
+                "fixedRotation": false,
+                "layer": 0,
+                "collisionMask": 4294967295,
+                "bullet": false
+              }
+            },
+            {
+              "type": "BoxCollider2D",
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "isTrigger": false,
+                "restitution": -1,
+                "friction": -1,
+                "width": 4,
+                "height": 0.5
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 4,
+                "height": 0.5,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.24705882352941178,
+                  "g": 0.29411764705882354,
+                  "b": 0.47058823529411764,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -4,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Platform 1"
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 3,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Platform 2"
+              }
+            },
+            {
+              "type": "RigidBody2D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.1,
+                "friction": 0.8,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0.05,
+                "fixedRotation": false,
+                "layer": 0,
+                "collisionMask": 4294967295,
+                "bullet": false
+              }
+            },
+            {
+              "type": "BoxCollider2D",
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "isTrigger": false,
+                "restitution": -1,
+                "friction": -1,
+                "width": 3,
+                "height": 0.5
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 3,
+                "height": 0.5,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.24705882352941178,
+                  "g": 0.29411764705882354,
+                  "b": 0.47058823529411764,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -4,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Platform 2"
+        },
+        {
+          "id": 5,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 6,
+                  "y": 1.5,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Platform 3"
+              }
+            },
+            {
+              "type": "RigidBody2D",
+              "data": {
+                "bodyType": "static",
+                "mass": 1,
+                "restitution": 0.1,
+                "friction": 0.8,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0.05,
+                "fixedRotation": false,
+                "layer": 0,
+                "collisionMask": 4294967295,
+                "bullet": false
+              }
+            },
+            {
+              "type": "BoxCollider2D",
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "isTrigger": false,
+                "restitution": -1,
+                "friction": -1,
+                "width": 4,
+                "height": 0.5
+              }
+            },
+            {
+              "type": "Shape",
+              "data": {
+                "kind": "rect",
+                "width": 4,
+                "height": 0.5,
+                "radius": 0.5,
+                "points": [],
+                "fill": {
+                  "r": 0.24705882352941178,
+                  "g": 0.29411764705882354,
+                  "b": 0.47058823529411764,
+                  "a": 1
+                },
+                "filled": true,
+                "stroke": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "strokeWidth": 0,
+                "alpha": 1,
+                "blend": "normal",
+                "layer": -4,
+                "order": 0,
+                "visible": true
+              }
+            }
+          ],
+          "name": "Platform 3"
+        },
+        {
+          "id": 6,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": -4,
+                  "y": 1,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Player"
+              }
+            },
+            {
+              "type": "RigidBody2D",
+              "data": {
+                "bodyType": "dynamic",
+                "mass": 1,
+                "restitution": 0,
+                "friction": 0.2,
+                "gravityScale": 1,
+                "velocity": {
+                  "x": 0,
+                  "y": 0
+                },
+                "angularVelocity": 0,
+                "linearDamping": 0,
+                "angularDamping": 0.05,
+                "fixedRotation": true,
+                "layer": 0,
+                "collisionMask": 4294967295,
+                "bullet": false
+              }
+            },
+            {
+              "type": "BoxCollider2D",
+              "data": {
+                "offset": {
+                  "x": 0,
+                  "y": 0
+                },
+                "isTrigger": false,
+                "restitution": -1,
+                "friction": -1,
+                "width": 0.8,
+                "height": 1.4
+              }
+            },
+            {
+              "type": "CharacterController2D",
+              "data": {
+                "moveSpeed": 6,
+                "acceleration": 60,
+                "airAcceleration": 30,
+                "jumpSpeed": 10,
+                "coyoteTime": 0.1,
+                "jumpBufferTime": 0.1,
+                "fallGravityScale": 1.5,
+                "jumpCutoff": 0.5,
+                "maxFallSpeed": 25,
+                "variableJump": true,
+                "grounded": false,
+                "facing": 1
+              }
+            },
+            {
+              "type": "Sprite",
+              "data": {
+                "texture": "player",
+                "frame": "",
+                "width": 1,
+                "height": 1.5,
+                "pivot": {
+                  "x": 0.5,
+                  "y": 0.5
+                },
+                "flipX": false,
+                "flipY": false,
+                "tint": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 1
+                },
+                "alpha": 1,
+                "blend": "normal",
+                "layer": 1,
+                "order": 0,
+                "visible": true,
+                "sourceRect": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 0,
+                  "height": 0
+                }
+              }
+            },
+            {
+              "type": "PlayerInput",
+              "data": {
+                "owner": "local",
+                "coOwners": [],
+                "mergeStrategy": "average"
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "PlayerController",
+                "props": {
+                  "speed": 7,
+                  "jump": 12
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "Tag",
+              "data": {
+                "tags": [
+                  "player"
+                ]
+              }
+            }
+          ],
+          "name": "Player"
+        },
+        {
+          "id": 7,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 6.5,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Title"
+              }
+            },
+            {
+              "type": "Text",
+              "data": {
+                "text": "Starter 2D · A/D or arrows to move, Space to jump",
+                "size": 0.55,
+                "font": "system-ui, sans-serif",
+                "bold": false,
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1,
+                  "a": 0.9
+                },
+                "align": "center",
+                "baseline": "middle",
+                "outline": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "outlineWidth": 0.04,
+                "maxWidth": 0,
+                "alpha": 1,
+                "layer": 10,
+                "order": 0,
+                "visible": true,
+                "screenSpace": false
+              }
+            }
+          ],
+          "name": "Title"
+        }
+      ],
+      "settings": {
+        "gravity": {
+          "x": 0,
+          "y": -24
+        }
+      }
+    }
+  ],
+  "startScene": "Main",
+  "scripts": [
+    {
+      "name": "PlayerController",
+      "source": "// Moves the player with the shared \"moveX\" axis and \"jump\" action.\n// Reads input through onOwnerInput so the same script drives local and\n// remote players in multiplayer rooms.\ndefineScript({\n  name: 'PlayerController',\n  description: 'Platformer movement on top of CharacterController2D.',\n  props: {\n    speed: { type: 'number', default: 7, min: 1, max: 20, label: 'Run speed' },\n    jump: { type: 'number', default: 12, min: 1, max: 30, label: 'Jump speed' },\n    respawnY: { type: 'number', default: -8, label: 'Fall below this to respawn' },\n  },\n  onStart(ctx) {\n    const cc = ctx.get('CharacterController2D');\n    cc.moveSpeed = ctx.props.speed;\n    cc.jumpSpeed = ctx.props.jump;\n    ctx.state.spawn = { x: ctx.transform.x, y: ctx.transform.y };\n  },\n  onOwnerInput(ctx, snap) {\n    const cc = ctx.get('CharacterController2D');\n    cc.move(snap.axes.moveX || 0);\n    if (snap.pressed.includes('jump')) cc.jump();\n    if (snap.released.includes('jump')) cc.jumpReleased();\n    const sprite = ctx.get('Sprite');\n    if (sprite && cc.facing) sprite.flipX = cc.facing < 0;\n  },\n  onFixedUpdate(ctx) {\n    if (ctx.transform.y < ctx.props.respawnY) {\n      const rb = ctx.get('RigidBody2D');\n      rb.setVelocity(0, 0);\n      ctx.transform.setPosition(ctx.state.spawn.x, ctx.state.spawn.y);\n    }\n  },\n});\n"
+    }
+  ],
+  "prefabs": [],
+  "assets": {
+    "assets": [
+      {
+        "id": "player",
+        "kind": "image",
+        "url": "assets/player.svg"
+      }
+    ]
+  },
+  "settings": {
+    "renderer": "2d",
+    "pixelsPerUnit": 40,
+    "pixelPerfect": false,
+    "fixedRate": 60,
+    "viewport": {
+      "width": 960,
+      "height": 540
+    },
+    "physics": {
+      "gravity": {
+        "x": 0,
+        "y": -24
+      },
+      "gravity3d": {
+        "x": 0,
+        "y": -20,
+        "z": 0
+      }
+    },
+    "network": {
+      "mode": "none",
+      "maxPlayers": 8,
+      "tickRate": 20
+    },
+    "multiUser": {
+      "sharedControl": false,
+      "mergeStrategy": "average"
+    },
+    "input": {
+      "actions": {
+        "jump": [
+          "Space",
+          "KeyW",
+          "ArrowUp",
+          "GamepadA",
+          "Touch:jump"
+        ],
+        "fire": [
+          "MouseLeft",
+          "KeyJ",
+          "GamepadX",
+          "Touch:fire"
+        ],
+        "action": [
+          "KeyE",
+          "Enter",
+          "GamepadB",
+          "Touch:action"
+        ],
+        "pause": [
+          "Escape",
+          "GamepadStart"
+        ]
+      },
+      "axes": {
+        "moveX": {
+          "negative": [
+            "KeyA",
+            "ArrowLeft",
+            "GamepadDpadLeft"
+          ],
+          "positive": [
+            "KeyD",
+            "ArrowRight",
+            "GamepadDpadRight"
+          ],
+          "gamepadAxis": 0,
+          "touchJoystick": "x"
+        },
+        "moveY": {
+          "negative": [
+            "KeyS",
+            "ArrowDown",
+            "GamepadDpadDown"
+          ],
+          "positive": [
+            "KeyW",
+            "ArrowUp",
+            "GamepadDpadUp"
+          ],
+          "gamepadAxis": 1,
+          "invertGamepad": true,
+          "touchJoystick": "y"
+        }
+      }
+    },
+    "touchControls": true,
+    "touchButtons": [
+      "jump"
+    ]
+  }
+}

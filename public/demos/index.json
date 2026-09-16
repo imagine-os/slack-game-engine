@@ -1,3 +1,50 @@
 {
-  "demos": []
+  "demos": [
+    {
+      "id": "starter-2d",
+      "name": "Starter 2D",
+      "title": "Starter 2D",
+      "description": "A player, a few platforms and a following camera. The blank canvas for a new 2D game.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": false,
+      "players": {
+        "min": 1,
+        "max": 1
+      },
+      "tags": [
+        "template",
+        "platformer"
+      ],
+      "controls": [
+        "A/D or arrows: move",
+        "Space: jump"
+      ],
+      "featured": false,
+      "template": true
+    },
+    {
+      "id": "starter-3d",
+      "name": "Starter 3D",
+      "title": "Starter 3D",
+      "description": "A lit cube on a plane with an orbit camera. The blank canvas for a new 3D game.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "3d",
+      "multiplayer": false,
+      "players": {
+        "min": 1,
+        "max": 1
+      },
+      "tags": [
+        "template",
+        "webgl"
+      ],
+      "controls": [
+        "Drag: orbit",
+        "Wheel: zoom"
+      ],
+      "featured": false,
+      "template": true
+    }
+  ]
 }

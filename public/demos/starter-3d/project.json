@@ -1,0 +1,427 @@
+{
+  "id": "starter-3d",
+  "name": "Starter 3D",
+  "version": 1,
+  "projectVersion": "0.1.0",
+  "description": "A lit cube on a plane with an orbit camera. The blank canvas for a new 3D game.",
+  "author": "Forge Engine demos",
+  "thumbnail": "thumbnail.svg",
+  "createdAt": "2026-09-16T00:00:00.000Z",
+  "updatedAt": "2026-09-16T00:00:00.000Z",
+  "scenes": [
+    {
+      "version": 1,
+      "name": "Main",
+      "entities": [
+        {
+          "id": 1,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 1,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0.29552020666133955,
+                  "z": 0,
+                  "w": 0.955336489125606
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Cube"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "cube",
+                "color": {
+                  "r": 1,
+                  "g": 0.47843137254901963,
+                  "b": 0.23921568627450981,
+                  "a": 1
+                },
+                "metallic": 0.15,
+                "roughness": 0.4,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Cube"
+        },
+        {
+          "id": 2,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 6,
+                  "y": 4,
+                  "z": 7
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Camera"
+              }
+            },
+            {
+              "type": "Camera3D",
+              "data": {
+                "fov": 55,
+                "near": 0.1,
+                "far": 500,
+                "orthographic": false,
+                "orthoSize": 10,
+                "active": true,
+                "priority": 0,
+                "clearColor": {
+                  "r": 0.1,
+                  "g": 0.11,
+                  "b": 0.14,
+                  "a": 1
+                },
+                "skyTop": {
+                  "r": 0.23137254901960785,
+                  "g": 0.3843137254901961,
+                  "b": 0.7019607843137254,
+                  "a": 1
+                },
+                "skyBottom": {
+                  "r": 0.8352941176470589,
+                  "g": 0.8745098039215686,
+                  "b": 0.9254901960784314,
+                  "a": 1
+                },
+                "skybox": true,
+                "fogEnabled": true,
+                "fogColor": {
+                  "r": 0.7803921568627451,
+                  "g": 0.8274509803921568,
+                  "b": 0.8901960784313725,
+                  "a": 1
+                },
+                "fogNear": 20,
+                "fogFar": 60,
+                "lookAt": 0
+              }
+            },
+            {
+              "type": "Script",
+              "data": {
+                "script": "OrbitCamera",
+                "props": {
+                  "target": "Cube",
+                  "distance": 9
+                },
+                "enabled": true
+              }
+            },
+            {
+              "type": "AudioListener",
+              "data": {
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Camera"
+        },
+        {
+          "id": 3,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 5,
+                  "y": 10,
+                  "z": 5
+                },
+                "rotation": {
+                  "x": -0.4155384462484667,
+                  "y": 0.2661003137748674,
+                  "z": -0.1285411045311107,
+                  "w": 0.8602299734049316
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Sun"
+              }
+            },
+            {
+              "type": "Light",
+              "data": {
+                "kind": "directional",
+                "color": {
+                  "r": 1,
+                  "g": 0.9607843137254902,
+                  "b": 0.9019607843137255,
+                  "a": 1
+                },
+                "intensity": 1.1,
+                "range": 10,
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Sun"
+        },
+        {
+          "id": 4,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ambient"
+              }
+            },
+            {
+              "type": "Light",
+              "data": {
+                "kind": "ambient",
+                "color": {
+                  "r": 0.6235294117647059,
+                  "g": 0.7058823529411765,
+                  "b": 1,
+                  "a": 1
+                },
+                "intensity": 0.3,
+                "range": 10,
+                "enabled": true
+              }
+            }
+          ],
+          "name": "Ambient"
+        },
+        {
+          "id": 5,
+          "components": [
+            {
+              "type": "Transform",
+              "data": {
+                "position": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "rotation": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0,
+                  "w": 1
+                },
+                "scale": {
+                  "x": 30,
+                  "y": 1,
+                  "z": 30
+                }
+              }
+            },
+            {
+              "type": "Name",
+              "data": {
+                "name": "Ground"
+              }
+            },
+            {
+              "type": "MeshRenderer",
+              "data": {
+                "mesh": "plane",
+                "color": {
+                  "r": 0.2980392156862745,
+                  "g": 0.3607843137254902,
+                  "b": 0.2901960784313726,
+                  "a": 1
+                },
+                "metallic": 0,
+                "roughness": 0.9,
+                "emissive": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0,
+                  "a": 1
+                },
+                "texture": "",
+                "unlit": false,
+                "wireframe": false,
+                "doubleSided": false,
+                "opacity": 1,
+                "visible": true,
+                "instanced": true
+              }
+            }
+          ],
+          "name": "Ground"
+        }
+      ]
+    }
+  ],
+  "startScene": "Main",
+  "scripts": [
+    {
+      "name": "OrbitCamera",
+      "source": "// Drag with the mouse (or a finger) to orbit, wheel to zoom. Idles slowly\n// around the target when nobody is dragging.\ndefineScript({\n  name: 'OrbitCamera',\n  description: 'Orbit camera around a target entity.',\n  props: {\n    target: { type: 'string', default: 'Cube', label: 'Target entity name' },\n    distance: { type: 'number', default: 9, min: 2, max: 40 },\n    autoRotate: { type: 'number', default: 0.15, min: 0, max: 2, label: 'Idle spin (rad/s)' },\n  },\n  onStart(ctx) {\n    const s = ctx.state;\n    s.yaw = 0.7;\n    s.pitch = 0.45;\n    s.dist = ctx.props.distance;\n  },\n  onUpdate(ctx, dt) {\n    const s = ctx.state;\n    const m = ctx.input.mouse;\n    if (m.held(0)) {\n      s.yaw -= m.delta.x * 0.005;\n      s.pitch = ctx.math.clamp(s.pitch + m.delta.y * 0.005, 0.05, 1.5);\n    } else s.yaw += dt * ctx.props.autoRotate;\n    const touch = ctx.input.touch.touches[0];\n    if (touch) { s.yaw -= touch.delta.x * 0.005; touch.delta.set(0, 0); }\n    if (m.wheel) s.dist = ctx.math.clamp(s.dist * (1 + Math.sign(m.wheel) * 0.1), 2, 40);\n    const target = ctx.find(ctx.props.target);\n    const tt = target ? ctx.getOn(target, 'Transform') : null;\n    const cx = tt ? tt.x : 0, cy = tt ? tt.y : 0, cz = tt ? tt.z : 0;\n    const cp = Math.cos(s.pitch);\n    ctx.transform.setPosition(cx + Math.sin(s.yaw) * cp * s.dist, cy + Math.sin(s.pitch) * s.dist, cz + Math.cos(s.yaw) * cp * s.dist);\n    ctx.transform.lookAt(tt ? tt.position : ctx.math.Vec3.ZERO);\n  },\n});\n"
+    }
+  ],
+  "prefabs": [],
+  "assets": {
+    "assets": []
+  },
+  "settings": {
+    "renderer": "3d",
+    "pixelsPerUnit": 32,
+    "pixelPerfect": false,
+    "fixedRate": 60,
+    "viewport": {
+      "width": 960,
+      "height": 540
+    },
+    "physics": {
+      "gravity": {
+        "x": 0,
+        "y": -20
+      },
+      "gravity3d": {
+        "x": 0,
+        "y": -20,
+        "z": 0
+      }
+    },
+    "network": {
+      "mode": "none",
+      "maxPlayers": 8,
+      "tickRate": 20
+    },
+    "multiUser": {
+      "sharedControl": false,
+      "mergeStrategy": "average"
+    },
+    "input": {
+      "actions": {
+        "jump": [
+          "Space",
+          "KeyW",
+          "ArrowUp",
+          "GamepadA",
+          "Touch:jump"
+        ],
+        "fire": [
+          "MouseLeft",
+          "KeyJ",
+          "GamepadX",
+          "Touch:fire"
+        ],
+        "action": [
+          "KeyE",
+          "Enter",
+          "GamepadB",
+          "Touch:action"
+        ],
+        "pause": [
+          "Escape",
+          "GamepadStart"
+        ]
+      },
+      "axes": {
+        "moveX": {
+          "negative": [
+            "KeyA",
+            "ArrowLeft",
+            "GamepadDpadLeft"
+          ],
+          "positive": [
+            "KeyD",
+            "ArrowRight",
+            "GamepadDpadRight"
+          ],
+          "gamepadAxis": 0,
+          "touchJoystick": "x"
+        },
+        "moveY": {
+          "negative": [
+            "KeyS",
+            "ArrowDown",
+            "GamepadDpadDown"
+          ],
+          "positive": [
+            "KeyW",
+            "ArrowUp",
+            "GamepadDpadUp"
+          ],
+          "gamepadAxis": 1,
+          "invertGamepad": true,
+          "touchJoystick": "y"
+        }
+      }
+    },
+    "touchControls": false,
+    "touchButtons": []
+  }
+}

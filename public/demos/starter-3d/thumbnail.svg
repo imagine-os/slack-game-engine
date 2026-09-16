@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b62b3"/><stop offset="1" stop-color="#0b0e16"/></linearGradient></defs>
+<rect width="320" height="180" fill="url(#bg)"/>
+
+<polygon points="0,150 320,120 320,180 0,180" fill="#4c5c4a"/>
+<polygon points="130,70 190,55 190,115 130,130" fill="#ff7a3d"/>
+<polygon points="100,85 130,70 130,130 100,145" fill="#c85a25"/>
+<polygon points="100,85 160,70 190,55 130,70" fill="#ffa571"/>
+<text x="160" y="35" fill="#fff" font-family="system-ui,sans-serif" font-size="18" text-anchor="middle" font-weight="700">Starter 3D</text>
+</svg>
