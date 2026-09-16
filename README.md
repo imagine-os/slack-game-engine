@@ -35,9 +35,25 @@ Pages:
 
 | Page | Purpose |
 | --- | --- |
-| `index.html` | Launcher: lists demos from `public/demos/index.json` and local projects. |
+| `index.html` | Launcher: demo gallery from `public/demos/index.json` (Play, Play Multiplayer, Open in Editor) and local projects. |
 | `editor.html` | Editor shell (`src/editor/`, filled by the editor worker). |
 | `play.html` | Runtime player: `?project=<id|url>&room=<id>&scene=<name>&renderer=2d|3d`. Without `project` it shows a smoke scene (`?renderer=3d` for WebGL; `?room=` still joins a multiplayer room). |
+
+### Playing multiplayer
+
+Every demo is host-authoritative multiplayer out of the box. Open a room and
+share the link; the first player in the room hosts, everyone else joins:
+
+```
+play.html?project=arena-blasters&room=ABC123            # WebRTC (PeerJS public signalling), no server
+play.html?project=arena-blasters&room=ABC123&net=local  # two tabs in the same browser (BroadcastChannel)
+play.html?project=arena-blasters&room=ABC123&net=ws&server=wss://your-host/ws   # self-hosted relay (server/)
+```
+
+`&name=Zoe` picks a display name. **Play Multiplayer** in the launcher creates
+a fresh room code and the lobby's **Copy invite link** shares it. When the
+host leaves, the remaining players elect a new host and the game continues.
+Guide: [`docs/MULTIPLAYER.md`](docs/MULTIPLAYER.md); demos: [`docs/DEMOS.md`](docs/DEMOS.md).
 
 ### Using the engine from code
 
@@ -121,9 +137,20 @@ including renderer, physics, network mode and shared control), `ProjectStore`
 (IndexedDB save/load/list/delete + JSON export/import), `ProjectLoader`
 (URL, demo id or local id), `runProject(engine, project)`.
 
-**Networking (interfaces)** – `Transport`, `NetSync`, `NullTransport`,
-`NetworkIdentity`, `NetTransform`, `engine.net` hub. The sync model is
+**Networking** – transports: WebRTC (`PeerTransport`, PeerJS signalling),
+WebSocket relay (`WebSocketTransport` + `server/`), same-browser
+`LocalTransport` (BroadcastChannel), in-process `MemoryNetwork` for tests and
+bots, offline `NullTransport`. `HostAuthoritativeSync`: quantized delta
+snapshots with interpolation/extrapolation, input relay with redundancy and
+edge merging, spawn/despawn with initial `Script.props`, ownership transfer,
+owner authority, shared control (`average` / `first-wins` / `additive`
+merging), RPCs, late join and host migration. `LockstepSync` for
+deterministic games. Lobby overlay with roster, RTT and invite link. Model
 documented in [`src/net/README.md`](src/net/README.md).
+
+**Demos** – seven generated projects in `public/demos/` (Arena Blasters, Sky
+Hoppers, Paddle Rush, Cube Racers, Tower Together, Starter 2D/3D) built from
+`demos/src/` with `npm run build:demos`; see [`docs/DEMOS.md`](docs/DEMOS.md).
 
 ## Repository structure
 
@@ -137,24 +164,23 @@ src/audio       AudioEngine, AudioSource/AudioListener, AudioSystem
 src/assets      AssetManager and loaders
 src/scripting   ScriptRuntime, Script component, ScriptContext, API .d.ts
 src/project     Project schema, store, loader, runProject
-src/net         Transport/NetSync interfaces, NullTransport, components, README
+src/net         transports (peer/ws/local/memory/null), HostAuthoritativeSync, LockstepSync, lobby UI
 src/ui          DOM Overlay (HUD)
 src/launcher    landing page          src/player  runtime player + smoke scenes
 src/editor      editor shell (editor worker)
 src/styles      shared CSS
-public/demos    bundled demo projects (demos worker)
-server/         multiplayer server (networking worker)
+public/demos    generated demo projects (sources in demos/src, generator in scripts/build-demos.ts)
+server/         WebSocket relay server for `?net=ws`
 docs/           ARCHITECTURE.md, API.md, CONTRIBUTING-WORKERS.md
 tests/          vitest unit tests
 ```
 
 ## Roadmap
 
-- Networking worker: WebSocket relay + WebRTC transports, host-authoritative
-  snapshot sync, input relay, RPCs, rooms, shared control.
-- Editor worker: scene hierarchy, generic inspector driven by the `Registry`,
+- Editor: scene hierarchy, generic inspector driven by the `Registry`,
   script editor with hot reload, asset browser, play-in-editor.
-- Demos worker: bundled demo projects in `public/demos/`.
+- Networking follow-ups: client-side prediction for owner-authority
+  entities, TURN configuration UI, spectators.
 - Engine follow-ups: sprite batching for WebGL 2D, shadow maps, audio
   effects buses, tilemap auto-tiling, joint constraints.
 

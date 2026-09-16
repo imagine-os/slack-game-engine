@@ -24,7 +24,7 @@ defineScript({
       const sync = ctx.net.hub.sync;
       if (sync) {
         for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.assign(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.assign(ctx, peerId)));
+        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.assign(ctx, peerId); this.resendHud(ctx); }));
         s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.unassign(ctx, peerId)));
       }
       this.refreshControllers(ctx);
@@ -113,20 +113,45 @@ defineScript({
   },
   finish(ctx, winner) {
     ctx.state.over = true;
+    ctx.state.winner = `${winner === 'left' ? 'Blue' : 'Orange'} wins ${ctx.state.score[winner]}-${ctx.state.score[winner === 'left' ? 'right' : 'left']}!`;
     const h = hud(ctx);
-    if (h) h.panel('winner', `${winner === 'left' ? 'Blue' : 'Orange'} wins ${ctx.state.score[winner]}-${ctx.state.score[winner === 'left' ? 'right' : 'left']}!`, 'New match in a moment');
+    if (h) h.panel('winner', ctx.state.winner, 'New match in a moment');
+    this.drawHud(ctx);
     ctx.timer(4, () => {
       ctx.state.score = { left: 0, right: 0 };
       ctx.state.over = false;
+      ctx.state.winner = null;
       if (h) h.remove('winner');
       this.drawHud(ctx);
       this.serve(ctx, ctx.random.chance(0.5) ? 1 : -1);
     });
   },
+
+  /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
+  broadcastHud(ctx, payload) {
+    if (!ctx.net.isHost || !ctx.net.online) return;
+    const json = JSON.stringify(payload);
+    if (json === ctx.state.lastHud) return;
+    ctx.state.lastHud = json;
+    ctx.net.rpc('hud', [payload], 'others');
+  },
+  /** Force the next broadcast (a newcomer needs the current state even if nothing changed). */
+  resendHud(ctx) { ctx.state.lastHud = null; this.drawHud(ctx); },
+  onRpc(ctx, name, args) {
+    if (name !== 'hud' || ctx.net.isHost) return;
+    const d = args[0];
+    ctx.state.score = d.score;
+    ctx.state.teams = d.teams;
+    ctx.state.winner = d.winner;
+    const h = hud(ctx);
+    if (h) { if (d.winner) h.panel('winner', d.winner, 'New match in a moment'); else h.remove('winner'); }
+    this.drawHud(ctx);
+  },
   drawHud(ctx) {
+    const s = ctx.state;
+    this.broadcastHud(ctx, { score: s.score, teams: s.teams, winner: s.winner || null });
     const h = hud(ctx);
     if (!h) return;
-    const s = ctx.state;
     h.text('score', `${s.score.left}   -   ${s.score.right}`, { anchor: 'top', y: 8 }).style.fontSize = '28px';
     const label = (side) => s.teams[side].length ? s.teams[side].map((p) => (p === ctx.net.localId ? 'you' : p)).join(' + ') : 'AI';
     h.text('teams', `Blue: ${label('left')}     Orange: ${label('right')}`, { anchor: 'top', y: 46 });

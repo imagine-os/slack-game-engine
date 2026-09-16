@@ -46,12 +46,42 @@ describe('Input action mapping', () => {
     expect(input.axis('moveX')).toBeCloseTo(-0.8);
   });
 
+  it('registers a click or tap that starts and ends between two polls as a one-frame press', () => {
+    const input = new Input();
+    input.bind('fire', ['MouseLeft', 'KeyJ', 'Touch:fire']);
+    // Playwright-style click: pointerdown + pointerup before the next Input.update().
+    input.mouse.setButton(0, true);
+    input.mouse.setButton(0, false);
+    tick(input);
+    expect(input.pressed('fire')).toBe(true);
+    expect(input.held('fire')).toBe(true);
+    expect(input.getSnapshot().pressed).toContain('fire');
+    input.endFrame();
+    tick(input);
+    expect(input.held('fire')).toBe(false);
+    expect(input.released('fire')).toBe(true);
+    // Same for a keyboard tap and a touch button tap.
+    input.endFrame();
+    input.keyboard.setDown('KeyJ', true);
+    input.keyboard.setDown('KeyJ', false);
+    tick(input);
+    expect(input.pressed('fire')).toBe(true);
+    input.endFrame();
+    tick(input);
+    input.endFrame();
+    input.touch.setButton('fire', true);
+    input.touch.setButton('fire', false);
+    tick(input);
+    expect(input.pressed('fire')).toBe(true);
+  });
+
   it('supports mouse, gamepad buttons and touch bindings', () => {
     const input = new Input();
     input.bind('fire', ['MouseLeft', 'GamepadX', 'Touch:fire']);
     input.mouse.setButton(0, true);
     tick(input);
     expect(input.held('fire')).toBe(true);
+    input.endFrame(); // the engine clears device edges after every frame
     input.mouse.setButton(0, false);
     tick(input);
     expect(input.held('fire')).toBe(false);

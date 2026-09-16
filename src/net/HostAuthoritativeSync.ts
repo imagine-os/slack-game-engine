@@ -63,6 +63,12 @@ interface SpawnInfo {
   name?: string;
   pos: [number, number, number];
   rot: [number, number, number, number];
+  /**
+   * Initial component state keyed by component type: the `Script` component
+   * (so `props` written right after `spawn()` reach every peer before the
+   * script starts there) plus every replicated type (see `replicationFieldsFor`).
+   */
+  comps?: Record<string, Record<string, unknown>>;
 }
 
 /** Binary message kinds on the `_snap` channel (unreliable). */
@@ -119,6 +125,8 @@ export class HostAuthoritativeSync implements NetSync {
 
   private byNetId = new Map<number, Entity>();
   private nextNetId = 1;
+  /** Host: spawns announced at the end of the frame so props set right after `spawn()` are included. */
+  private pendingSpawns: number[] = [];
   private roster = new Map<PeerId, PlayerRow>();
   private clients = new Map<PeerId, ClientState>();
   private inputs = new Map<PeerId, PeerInput>();
@@ -210,6 +218,7 @@ export class HostAuthoritativeSync implements NetSync {
     this.inputs.clear();
     this.history.clear();
     this.known.clear();
+    this.pendingSpawns.length = 0;
     this.events.emit('disconnected', { reason: 'stopped' });
   }
 
@@ -257,6 +266,7 @@ export class HostAuthoritativeSync implements NetSync {
     this.engine.net.update();
     if (this.updates++ >= 1) this.flushDeferred();
     if (!this.transport.connected) return;
+    this.flushSpawns();
     this.sendAccum += dt;
     const interval = 1 / this.options.tickRate;
     if (this.sendAccum < interval) return;
@@ -295,6 +305,12 @@ export class HostAuthoritativeSync implements NetSync {
   simulatesLocally(ni: NetworkIdentity): boolean {
     if (ni.authority === 'owner') return ni.ownerId === this.localId;
     return this.isHost;
+  }
+
+  /** {@link NetSync.simulatesEntity}: non-replicated entities are always local. */
+  simulatesEntity(entity: Entity): boolean {
+    const ni = this.identity(entity);
+    return !ni || this.simulatesLocally(ni);
   }
 
   /** Switch physics bodies to kinematic on peers that only receive state, and back when authority returns. */
@@ -359,7 +375,52 @@ export class HostAuthoritativeSync implements NetSync {
       name: n?.name,
       pos: t ? [t.position.x, t.position.y, t.position.z] : [0, 0, 0],
       rot: t ? [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w] : [0, 0, 0, 1],
+      comps: this.initialState(e, ni),
     };
+  }
+
+  /** Serialized `Script` + replicated components, sent with spawn/welcome so peers start from the host's values. */
+  private initialState(e: Entity, ni: NetworkIdentity): Record<string, Record<string, unknown>> | undefined {
+    const world = this.engine.world;
+    const registry = world.registry;
+    let out: Record<string, Record<string, unknown>> | undefined;
+    for (const c of world.getComponents(e)) {
+      let data: Record<string, unknown> | undefined;
+      if (c.type === 'Script') data = registry.serialize(c);
+      else {
+        const fields = replicationFieldsFor(registry, c.type, ni.syncComponents);
+        if (fields) data = JSON.parse(serializeReplicated(registry, c, fields)) as Record<string, unknown>;
+      }
+      if (data) (out ??= {})[c.type] = data;
+    }
+    return out;
+  }
+
+  /** Apply the initial component state carried by a spawn/welcome message. */
+  private applyInitialState(e: Entity, comps: Record<string, Record<string, unknown>> | undefined, includeScript: boolean): void {
+    if (!comps) return;
+    const world = this.engine.world;
+    for (const [type, data] of Object.entries(comps)) {
+      if (type === 'Script' && !includeScript) continue;
+      const c = world.getComponent(e, type);
+      if (!c) continue;
+      try { world.registry.applyProps(c, data); } catch { /* unknown type on this peer */ }
+    }
+  }
+
+  /** Host: broadcast spawns queued during this frame (skipping entities already gone). */
+  private flushSpawns(): void {
+    if (!this.pendingSpawns.length || !this.isHost) { this.pendingSpawns.length = 0; return; }
+    const list = this.pendingSpawns;
+    this.pendingSpawns = [];
+    for (const netId of list) {
+      const e = this.byNetId.get(netId);
+      if (e === undefined || !this.engine.world.isAlive(e)) continue;
+      const ni = this.identity(e);
+      if (!ni) continue;
+      const msg: Ctl = { t: 'spawn', e: this.spawnInfoOf(e, ni) };
+      this.ctl.send('all', msg);
+    }
   }
 
   // ----------------------------------------------------------------- spawn
@@ -387,8 +448,9 @@ export class HostAuthoritativeSync implements NetSync {
     if (pi) pi.owner = ni.ownerId;
     this.byNetId.set(ni.netId, e);
     this.applyPolicy(e, ni);
-    const msg: Ctl = { t: 'spawn', e: this.spawnInfoOf(e, ni) };
-    this.ctl.send('all', msg);
+    // Announced in the next `update()`: callers typically write Script.props / Name / velocity
+    // right after spawn(), and those must travel with the spawn so remote scripts start correctly.
+    this.pendingSpawns.push(ni.netId);
     this.events.emit('spawned', { entity: e, netId: ni.netId, ownerId: ni.ownerId });
     return e;
   }
@@ -401,6 +463,10 @@ export class HostAuthoritativeSync implements NetSync {
       this.ctl.send('host', req);
       return;
     }
+    // A spawn still queued for this frame is dropped instead of announced (clients never see it).
+    const pending = this.pendingSpawns.indexOf(ni.netId);
+    if (pending >= 0) { this.pendingSpawns.splice(pending, 1); this.destroyReplicated(ni.netId); return; }
+    this.flushSpawns();
     const msg: Ctl = { t: 'despawn', netId: ni.netId };
     this.ctl.send('all', msg);
     this.destroyReplicated(ni.netId);
@@ -461,6 +527,7 @@ export class HostAuthoritativeSync implements NetSync {
       this.ctl.send('host', req);
       return;
     }
+    this.flushSpawns();
     this.applyOwner(ni, ownerId);
     const msg: Ctl = { t: 'owner', netId: ni.netId, ownerId };
     this.ctl.send('all', msg);
@@ -484,6 +551,7 @@ export class HostAuthoritativeSync implements NetSync {
       this.ctl.send('host', req);
       return;
     }
+    this.flushSpawns();
     const peers = ni.sharedWith.filter((p) => p !== peerId);
     if (enabled) peers.push(peerId);
     this.applyShare(ni, peers);
@@ -552,10 +620,15 @@ export class HostAuthoritativeSync implements NetSync {
     else if (snapshot.tick >= entry.snapshot.tick) {
       // Reuse the stored object; copy fields (no new snapshot per tick).
       const dst = entry.snapshot;
+      // Several client ticks can arrive between two host steps. Keep the press/release edges of
+      // a stored snapshot that was not applied yet, so a quick tap is never lost to the newer one.
+      const pending = snapshot.tick !== dst.tick && entry.appliedTick !== dst.tick;
+      const pressed = pending ? union(dst.pressed, snapshot.pressed) : snapshot.pressed.slice();
+      const released = pending ? union(dst.released, snapshot.released) : snapshot.released.slice();
       dst.tick = snapshot.tick;
       dst.held = snapshot.held.slice();
-      dst.pressed = snapshot.pressed.slice();
-      dst.released = snapshot.released.slice();
+      dst.pressed = pressed;
+      dst.released = released;
       dst.axes = { ...snapshot.axes };
       dst.pointer = snapshot.pointer ? { ...snapshot.pointer } : undefined;
     }
@@ -833,7 +906,7 @@ export class HostAuthoritativeSync implements NetSync {
     if (target === 'all' || target === me || (target === 'host' && this.isHost)) this.deliverRpc(name, args, me, netId);
     if (target === me || (target === 'host' && this.isHost)) return;
     const msg: Ctl = { t: 'rpc', name, args, target: target === 'all' ? 'others' : target, netId, from: me };
-    if (this.isHost) this.routeRpc(msg);
+    if (this.isHost) { this.flushSpawns(); this.routeRpc(msg); }
     else this.ctl.send('host', msg);
   }
 
@@ -935,6 +1008,7 @@ export class HostAuthoritativeSync implements NetSync {
       return;
     }
     const isNew = !this.roster.has(from);
+    this.flushSpawns();
     this.roster.set(from, { peerId: from, name });
     let c = this.clients.get(from);
     if (!c) this.clients.set(from, (c = { peerId: from, name, acked: 0, sinceKeyframe: 0 }));
@@ -1016,6 +1090,9 @@ export class HostAuthoritativeSync implements NetSync {
       const t = world.getComponent(e, Transform);
       if (t) { t.rotation.set(info.rot[0], info.rot[1], info.rot[2], info.rot[3]); t.markDirty(); }
     }
+    // Fresh entities take the host's Script.props before their script starts; entities we already
+    // had (scene objects on welcome) only take replicated game state, not script configuration.
+    this.applyInitialState(e, info.comps, created);
     this.byNetId.set(info.netId, e);
     this.applyPolicy(e, ni);
     if (created) this.events.emit('spawned', { entity: e, netId: info.netId, ownerId: info.ownerId });
@@ -1111,6 +1188,12 @@ function maskOf(names: readonly string[], list: readonly string[]): number {
     if (i >= 0 && i < 32) m |= 1 << i;
   }
   return m >>> 0;
+}
+
+function union(a: readonly string[], b: readonly string[]): string[] {
+  const out = a.slice();
+  for (const x of b) if (!out.includes(x)) out.push(x);
+  return out;
 }
 
 function unmask(names: readonly string[], m: number): string[] {

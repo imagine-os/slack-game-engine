@@ -25,7 +25,7 @@ defineScript({
       const sync = ctx.net.hub.sync;
       if (sync) {
         for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));
+        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
         s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
       }
       this.startCountdown(ctx);
@@ -78,16 +78,20 @@ defineScript({
     const h = hud(ctx);
     const tick = () => {
       if (n > 0) {
-        if (h) h.text('countdown', String(n), { anchor: 'center' }).style.fontSize = '72px';
+        s.countdown = String(n);
+        if (h) h.text('countdown', s.countdown, { anchor: 'center' }).style.fontSize = '72px';
         ctx.audio.play('beep', { volume: 0.5 });
         n--;
         ctx.timer(1, tick);
       } else {
-        if (h) { h.text('countdown', 'GO!', { anchor: 'center' }); ctx.timer(1, () => h.remove('countdown')); }
+        s.countdown = 'GO!';
+        if (h) h.text('countdown', 'GO!', { anchor: 'center' });
+        ctx.timer(1, () => { s.countdown = null; if (h) h.remove('countdown'); this.drawStandings(ctx); });
         ctx.audio.play('go', { volume: 0.6 });
         s.raceStarted = true;
         ctx.send('go', {});
       }
+      this.drawStandings(ctx);
     };
     tick();
   },
@@ -106,9 +110,11 @@ defineScript({
     const s = ctx.state;
     s.finished = true;
     const p = s.players[peerId];
+    s.winner = { title: `P${p.index + 1} wins!`, body: `Best lap ${p.best.toFixed(2)}s\nRestarting in 6s` };
     const h = hud(ctx);
-    if (h) h.panel('winner', `P${p.index + 1} wins!`, `Best lap ${p.best.toFixed(2)}s\nRestarting in 6s`);
+    if (h) h.panel('winner', s.winner.title, s.winner.body);
     ctx.audio.play('go', { volume: 0.6 });
+    this.drawStandings(ctx);
     ctx.timer(6, () => {
       for (const q of Object.values(s.players)) {
         q.lap = 0; q.best = 0;
@@ -116,17 +122,47 @@ defineScript({
         ctx.sendTo(q.entity, 'resetTo', slot);
       }
       s.finished = false;
+      s.winner = null;
       if (h) h.remove('winner');
       this.drawStandings(ctx);
       this.startCountdown(ctx);
     });
   },
+
+  /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
+  broadcastHud(ctx, payload) {
+    if (!ctx.net.isHost || !ctx.net.online) return;
+    const json = JSON.stringify(payload);
+    if (json === ctx.state.lastHud) return;
+    ctx.state.lastHud = json;
+    ctx.net.rpc('hud', [payload], 'others');
+  },
+  /** Force the next broadcast (a newcomer needs the current state even if nothing changed). */
+  resendHud(ctx) { ctx.state.lastHud = null; this.drawStandings(ctx); },
+  onRpc(ctx, name, args) {
+    if (name !== 'hud' || ctx.net.isHost) return;
+    const d = args[0];
+    const s = ctx.state;
+    s.players = d.players;   // { peerId: { index, lap, best } } — no entities on this side
+    if (d.raceStarted && !s.raceStarted) ctx.send('go', {});   // local karts start their lap timers
+    s.raceStarted = d.raceStarted;
+    const h = hud(ctx);
+    if (h) {
+      if (d.countdown) h.text('countdown', d.countdown, { anchor: 'center' }).style.fontSize = '72px'; else h.remove('countdown');
+      if (d.winner) h.panel('winner', d.winner.title, d.winner.body); else h.remove('winner');
+    }
+    this.drawStandings(ctx);
+  },
   drawStandings(ctx) {
+    const s = ctx.state;
+    const rows = {};
+    for (const [id, p] of Object.entries(s.players)) rows[id] = { index: p.index, lap: p.lap, best: p.best };
+    this.broadcastHud(ctx, { players: rows, raceStarted: !!s.raceStarted, countdown: s.countdown || null, winner: s.winner || null });
     const h = hud(ctx);
     if (!h) return;
-    const rows = Object.values(ctx.state.players).sort((a, b) => b.lap - a.lap || (a.best || 1e9) - (b.best || 1e9))
+    const standings = Object.values(ctx.state.players).sort((a, b) => b.lap - a.lap || (a.best || 1e9) - (b.best || 1e9))
       .map((p, i) => `${i + 1}. P${p.index + 1}  lap ${p.lap}/${ctx.props.laps}${p.best ? `  best ${p.best.toFixed(2)}s` : ''}`);
-    h.text('standings', rows.join('\n'), { anchor: 'top-right', y: 48 });
+    h.text('standings', standings.join('\n'), { anchor: 'top-right', y: 48 });
     h.text('hint', 'W/S throttle · A/D steer · E reset kart', { anchor: 'bottom-right' });
   },
 });

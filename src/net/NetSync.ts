@@ -65,6 +65,12 @@ export interface NetSync {
   spawn(prefab: string, opts?: { ownerId?: PeerId; position?: { x: number; y: number; z?: number }; authority?: 'host' | 'owner' }): Entity;
   /** Despawn everywhere. */
   despawn(entity: Entity): void;
+  /**
+   * Does the local peer run the simulation (physics, `onOwnerInput`) for this
+   * entity? False on peers that only receive its replicated state, so scripts
+   * there must not react to input. Omitted (lockstep): every peer simulates.
+   */
+  simulatesEntity?(entity: Entity): boolean;
   /** Transfer ownership (host only, or owner handing off). */
   setOwner(entity: Entity, ownerId: PeerId): void;
   /** Grant/revoke shared control of an entity to an extra peer. */

@@ -46,7 +46,7 @@ defineScript({
       const sync = ctx.net.hub.sync;
       if (sync) {
         for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));
+        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
         s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
       }
       s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;
@@ -157,8 +157,10 @@ defineScript({
   gameOver(ctx) {
     const s = ctx.state;
     s.over = true;
+    s.overBody = `You survived ${s.wave - 1} wave${s.wave - 1 === 1 ? '' : 's'}.\nRestarting in 6s`;
     const h = hud(ctx);
-    if (h) h.panel('over', 'The base has fallen', `You survived ${s.wave - 1} wave${s.wave - 1 === 1 ? '' : 's'}.\nRestarting in 6s`);
+    if (h) h.panel('over', 'The base has fallen', s.overBody);
+    this.drawHud(ctx);
     ctx.timer(6, () => this.restart(ctx));
   },
   restart(ctx) {
@@ -170,6 +172,7 @@ defineScript({
     s.wave = 0;
     s.toSpawn = 0;
     s.over = false;
+    s.overBody = null;
     s.cleared = false;
     s.nextWaveAt = ctx.time.elapsed + ctx.props.waveDelay;
     ctx.send('goldChanged', { gold: s.gold });
@@ -177,10 +180,34 @@ defineScript({
     if (h) h.remove('over');
     this.drawHud(ctx);
   },
+
+  /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
+  broadcastHud(ctx, payload) {
+    if (!ctx.net.isHost || !ctx.net.online) return;
+    const json = JSON.stringify(payload);
+    if (json === ctx.state.lastHud) return;
+    ctx.state.lastHud = json;
+    ctx.net.rpc('hud', [payload], 'others');
+  },
+  /** Force the next broadcast (a newcomer needs the current state even if nothing changed). */
+  resendHud(ctx) { ctx.state.lastHud = null; this.drawHud(ctx); },
+  onRpc(ctx, name, args) {
+    if (name !== 'hud' || ctx.net.isHost) return;
+    const d = args[0];
+    const s = ctx.state;
+    s.gold = d.gold; s.base = d.base; s.wave = d.wave; s.toSpawn = d.toSpawn; s.over = d.over;
+    s.nextWaveAt = d.secsToWave === null ? undefined : ctx.time.elapsed + d.secsToWave;
+    ctx.send('goldChanged', { gold: s.gold });   // local Builders colour their cursor by affordability
+    const h = hud(ctx);
+    if (h) { if (d.overBody) h.panel('over', 'The base has fallen', d.overBody); else h.remove('over'); }
+    this.drawHud(ctx);
+  },
   drawHud(ctx) {
+    const s = ctx.state;
+    const secsToWave = s.nextWaveAt !== undefined ? Math.max(0, Math.ceil(s.nextWaveAt - ctx.time.elapsed)) : null;
+    this.broadcastHud(ctx, { gold: s.gold, base: s.base, wave: s.wave, toSpawn: s.toSpawn, secsToWave, over: s.over, overBody: s.overBody || null });
     const h = hud(ctx);
     if (!h) return;
-    const s = ctx.state;
     h.text('gold', `Gold ${s.gold}   Base ${s.base}/${ctx.props.baseHealth}`, { anchor: 'top-left' }).style.fontSize = '18px';
     const next = s.nextWaveAt !== undefined ? `next wave in ${Math.max(0, Math.ceil(s.nextWaveAt - ctx.time.elapsed))}s` : `${ctx.findAll('enemy').length + s.toSpawn} enemies`;
     h.text('wave', `Wave ${s.wave}   ${next}`, { anchor: 'top-right', y: 48 });

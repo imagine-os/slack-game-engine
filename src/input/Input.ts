@@ -206,6 +206,25 @@ export class Input {
     return this.keyboard.held(b);
   }
 
+  /**
+   * A binding that went down and up again between two polls (a fast click or
+   * tap) is never seen as held, so without this the action would never register
+   * a press. The devices latch such edges until `endFrame`, so count them as
+   * active for this one frame.
+   */
+  private bindingTapped(b: Binding): boolean {
+    if (b.startsWith('Mouse')) {
+      const idx = MOUSE_NAMES[b] ?? parseInt(b.slice(5), 10);
+      return Number.isFinite(idx) && this.mouse.pressed(idx);
+    }
+    if (b.startsWith('Gamepad')) {
+      const name = b.slice(7) as GamepadButtonName;
+      return (GAMEPAD_BUTTONS as readonly string[]).includes(name) && this.gamepads.pressed(name);
+    }
+    if (b.startsWith('Touch:')) return this.touch.pressed(b.slice(6));
+    return this.keyboard.pressed(b);
+  }
+
   /** Any binding of any kind currently active (for "press any key"). */
   anyHeld(): boolean {
     return this.keyboard.heldCodes().length > 0 || this.mouse.buttons !== 0 || this.touch.touches.length > 0;
@@ -228,7 +247,7 @@ export class Input {
     this.heldNow.clear();
     for (const [name, bindings] of this.actions) {
       for (let i = 0; i < bindings.length; i++) {
-        if (this.bindingHeld(bindings[i])) {
+        if (this.bindingHeld(bindings[i]) || this.bindingTapped(bindings[i])) {
           this.heldNow.add(name);
           break;
         }

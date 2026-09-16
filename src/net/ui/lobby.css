@@ -18,6 +18,8 @@
   backdrop-filter: blur(6px);
 }
 .net-lobby.collapsed .net-lobby-panel { display: none; }
+/* Collapsed: a pill at the bottom centre, clear of the top-left/top-right HUD corners games use for scores. */
+.net-lobby.collapsed { top: auto; bottom: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 24px); }
 .net-lobby-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .net-lobby-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim, #9aa1b5); }
 .net-lobby-code { font-family: var(--mono, monospace); font-size: 22px; font-weight: 600; letter-spacing: 0.08em; user-select: all; }

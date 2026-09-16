@@ -257,7 +257,9 @@ export class ScriptRuntime {
       if (!this.active(inst)) continue;
       if (inst.def.onOwnerInput) {
         const pi = this.engine.world.getComponent(inst.entity, PlayerInput);
-        if (pi) this.invoke(inst, 'onOwnerInput', pi.snapshot, dt);
+        // Only where the entity is simulated: clients of a host-authoritative room render the
+        // replicated result and must not steer (or fire from) their kinematic copy.
+        if (pi && this.engine.net.sync?.simulatesEntity?.(inst.entity) !== false) this.invoke(inst, 'onOwnerInput', pi.snapshot, dt);
       }
       this.invoke(inst, 'onFixedUpdate', dt);
     }

@@ -29,7 +29,7 @@ defineScript({
     const sync = ctx.net.hub.sync;
     if (sync) {
       for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-      s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));
+      s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
       s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
     }
     for (let i = 0; i < ctx.props.asteroids; i++) this.spawnAsteroid(ctx, 3, true);
@@ -117,18 +117,45 @@ defineScript({
   },
   endRound(ctx, winner) {
     ctx.state.over = true;
+    ctx.state.winner = winner.name;
     const h = hud(ctx);
     if (h) h.panel('winner', `${winner.name} wins!`, 'Next round starts in a moment');
     ctx.send('roundOver', { winner: winner.name });
+    this.drawHud(ctx);
     ctx.timer(4, () => {
       for (const p of Object.values(ctx.state.players)) p.score = 0;
       ctx.state.over = false;
+      ctx.state.winner = null;
       if (h) h.remove('winner');
       this.drawHud(ctx);
     });
   },
 
+  /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
+  broadcastHud(ctx, payload) {
+    if (!ctx.net.isHost || !ctx.net.online) return;
+    const json = JSON.stringify(payload);
+    if (json === ctx.state.lastHud) return;
+    ctx.state.lastHud = json;
+    ctx.net.rpc('hud', [payload], 'others');
+  },
+  /** Force the next broadcast (a newcomer needs the current state even if nothing changed). */
+  resendHud(ctx) { ctx.state.lastHud = null; this.drawHud(ctx); },
+  onRpc(ctx, name, args) {
+    if (name !== 'hud' || ctx.net.isHost) return;
+    const d = args[0];
+    ctx.state.players = d.players;   // { peerId: { name, score, index } } — no entities on this side
+    ctx.state.winner = d.winner;
+    const h = hud(ctx);
+    if (h) { if (d.winner) h.panel('winner', `${d.winner} wins!`, 'Next round starts in a moment'); else h.remove('winner'); }
+    this.drawHud(ctx);
+  },
+
   drawHud(ctx) {
+    const s = ctx.state;
+    const shared = {};
+    for (const [id, p] of Object.entries(s.players)) shared[id] = { name: p.name, score: p.score, index: p.index };
+    this.broadcastHud(ctx, { players: shared, winner: s.winner || null });
     const h = hud(ctx);
     if (!h) return;
     const me = ctx.net.localId;

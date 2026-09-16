@@ -33,7 +33,7 @@ defineScript({
       const sync = ctx.net.hub.sync;
       if (sync) {
         for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
-        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));
+        s.unsub.push(sync.on('playerJoined', ({ peerId }) => { this.addPlayer(ctx, peerId); this.resendHud(ctx); }));
         s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
       }
     }
@@ -94,10 +94,12 @@ defineScript({
     const s = ctx.state;
     s.complete = true;
     const secs = (ctx.time.elapsed - s.startTime).toFixed(1);
+    s.done = `Coins ${s.coins} / ${s.totalCoins} · ${secs}s\nRestarting in ${ctx.props.restartDelay}s`;
     const h = hud(ctx);
-    if (h) h.panel('complete', 'Level complete!', `Coins ${s.coins} / ${s.totalCoins} · ${secs}s\nRestarting in ${ctx.props.restartDelay}s`);
+    if (h) h.panel('complete', 'Level complete!', s.done);
     ctx.audio.play('goal', { volume: 0.8 });
     ctx.send('levelComplete', {});
+    this.drawHud(ctx);
     ctx.timer(ctx.props.restartDelay, () => this.restart(ctx));
   },
   restart(ctx) {
@@ -109,6 +111,7 @@ defineScript({
     s.checkpoint = { ...s.spawn };
     s.startTime = ctx.time.elapsed;
     s.complete = false;
+    s.done = null;
     for (const p of Object.values(s.players)) {
       const t = ctx.getOn(p.entity, 'Transform');
       if (t) t.setPosition(s.spawn.x + (p.index % 4) * 0.6, s.spawn.y);
@@ -118,11 +121,35 @@ defineScript({
     if (h) h.remove('complete');
     this.drawHud(ctx);
   },
-  drawHud(ctx) {
+
+  /** Host → clients: the HUD state travels as an RPC on this entity so guests see the same scoreboard. */
+  broadcastHud(ctx, payload) {
+    if (!ctx.net.isHost || !ctx.net.online) return;
+    const json = JSON.stringify(payload);
+    if (json === ctx.state.lastHud) return;
+    ctx.state.lastHud = json;
+    ctx.net.rpc('hud', [payload], 'others');
+  },
+  /** Force the next broadcast (a newcomer needs the current state even if nothing changed). */
+  resendHud(ctx) { ctx.state.lastHud = null; this.drawHud(ctx); },
+  onRpc(ctx, name, args) {
+    if (name !== 'hud' || ctx.net.isHost) return;
+    const d = args[0];
+    const s = ctx.state;
+    s.coins = d.coins;
+    s.totalCoins = d.totalCoins;
+    if (Math.abs((ctx.time.elapsed - s.startTime) - d.secs) > 1.5) s.startTime = ctx.time.elapsed - d.secs;
+    s.complete = d.complete;
     const h = hud(ctx);
-    if (!h) return;
+    if (h) { if (d.done) h.panel('complete', 'Level complete!', d.done); else h.remove('complete'); }
+    this.drawHud(ctx);
+  },
+  drawHud(ctx) {
     const s = ctx.state;
     const secs = Math.floor(ctx.time.elapsed - s.startTime);
+    this.broadcastHud(ctx, { coins: s.coins, totalCoins: s.totalCoins, secs, complete: s.complete, done: s.done || null });
+    const h = hud(ctx);
+    if (!h) return;
     h.text('coins', `Coins ${s.coins} / ${s.totalCoins}   ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, { anchor: 'top-left' });
     h.text('hint', 'Reach the flag together · A/D move · Space jump', { anchor: 'top' });
   },

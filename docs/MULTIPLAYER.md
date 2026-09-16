@@ -44,7 +44,11 @@ defineScript({
 
 The same code runs offline and online. Online, the host applies each player's
 snapshot to the `PlayerInput` that player owns before scripts run; clients
-only send input and render the interpolated result.
+only send input and render the interpolated result: `onOwnerInput` is not
+called on a peer that does not simulate the entity (`sync.simulatesEntity`),
+so a script can spawn, fire or play sounds there without guarding on
+`ctx.net.isHost`. A quick tap is never lost: press/release edges from client
+ticks that arrive between two host steps are merged into the next one.
 
 ## 4. Spawn one avatar per player (host)
 
@@ -70,6 +74,16 @@ defineScript({
 
 Or the one-liner equivalent from a built-in script or `main.ts`:
 `(engine.net.sync as HostAuthoritativeSync).spawnPlayers('Player', { position: (i) => ({ x: i * 2, y: 1 }) })`.
+
+Configure the instance right after `spawn()`: `ctx.getOn(e, 'Script').props.color = '#ff7a3d'`,
+`ctx.getOn(e, 'Name').name = ...`, `rb.setVelocity(...)`. The host announces the
+spawn at the end of the frame with the `Script` component, the `Name`, the
+transform and any replicated components, so remote copies start their script
+with the same props (late joiners get the same through the `welcome`).
+
+HUD or other host-only state that guests should see travels as an RPC on the
+manager entity: `ctx.net.rpc('hud', [payload], 'others')` on the host and
+`onRpc(ctx, name, args)` on every peer (see the demos' `GameManager` scripts).
 
 Check `ctx.net.isHost` inside handlers (not once at start): after host
 migration the new host's `GameManager` starts receiving `playerJoined`/

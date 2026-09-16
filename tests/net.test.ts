@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  Engine, Transform, PlayerInput, RigidBody2D, Script, NULL_ENTITY,
+  Engine, Transform, PlayerInput, RigidBody2D, Script, Name, NULL_ENTITY,
   NetworkIdentity, NetTransform, MemoryNetwork, HostAuthoritativeSync, LockstepSync,
   ByteWriter, ByteReader, packQuat, unpackQuat, encodeWorldSnapshot, decodeWorldSnapshot, newEntityState, captureTransform, DEFAULT_POLICY,
   createEmptySnapshot, markReplicated, parseNetParams, createTransport,
@@ -520,6 +520,112 @@ describe('HostAuthoritativeSync', () => {
 });
 
 // ------------------------------------------------------------------ lockstep
+
+describe('HostAuthoritativeSync spawn state and client scripts', () => {
+  const avatarPrefab = (script: string): PrefabData => ({
+    version: 1,
+    name: 'Avatar',
+    entities: [{
+      id: 1,
+      name: 'Avatar',
+      components: [
+        { type: 'Transform', data: {} },
+        { type: 'NetworkIdentity', data: {} },
+        { type: 'NetTransform', data: {} },
+        { type: 'PlayerInput', data: {} },
+        { type: 'RigidBody2D', data: { gravityScale: 0 } },
+        { type: 'Script', data: { script } },
+      ],
+    }],
+  });
+
+  async function scriptedPeers(net: MemoryNetwork, source: string, scriptName: string): Promise<Peer[]> {
+    const h = await makePeer(net, 'g', 'Host');
+    const c = await makePeer(net, 'g', 'Client');
+    for (const p of [h, c]) {
+      p.engine.scripting.consoleLogging = false;
+      p.engine.scripting.compile(source);
+      p.engine.prefabs.set('Avatar', avatarPrefab(scriptName));
+    }
+    pump([h, c], net, 2);
+    return [h, c];
+  }
+
+  it('replicates Script.props and Name written right after spawn(), before the remote script starts', async () => {
+    const net = new MemoryNetwork();
+    const source = `defineScript({ name: 'Look', props: { color: { type: 'string', default: '#000000' }, label: { type: 'string', default: 'P?' } }, onStart(ctx) { ctx.state.seen = ctx.props.color + '/' + ctx.props.label; } })`;
+    const [h, c] = await scriptedPeers(net, source, 'Look');
+    const e = h.sync.spawn('Avatar', { ownerId: c.transport.localId, position: { x: 1, y: 2 } });
+    // The demos' GameManagers do exactly this: configure the prefab instance after spawn().
+    const script = h.engine.world.getComponent(e, Script)!;
+    script.props.color = '#ff7a3d';
+    script.props.label = 'P2';
+    h.engine.world.getComponent(e, Name)!.name = 'Avatar P2';
+    pump([h, c], net, 3);
+    const ce = c.sync.entityOf(h.sync.netIdOf(e));
+    expect(ce).not.toBe(NULL_ENTITY);
+    expect(c.engine.world.getComponent(ce, Script)!.props).toMatchObject({ color: '#ff7a3d', label: 'P2' });
+    expect(c.engine.world.nameOf(ce)).toBe('Avatar P2');
+    expect(c.engine.scripting.instanceOf(ce)!.ctx.state.seen).toBe('#ff7a3d/P2');
+    // Late joiners receive the same values with the welcome.
+    const late = await makePeer(net, 'g', 'Late');
+    late.engine.scripting.consoleLogging = false;
+    late.engine.scripting.compile(source);
+    late.engine.prefabs.set('Avatar', avatarPrefab('Look'));
+    pump([h, c, late], net, 5);
+    const le = late.sync.entityOf(h.sync.netIdOf(e));
+    expect(le).not.toBe(NULL_ENTITY);
+    expect(late.engine.scripting.instanceOf(le)!.ctx.state.seen).toBe('#ff7a3d/P2');
+  });
+
+  it('drops a spawn that is despawned in the same frame instead of announcing it', async () => {
+    const net = new MemoryNetwork();
+    const [h, c] = await scriptedPeers(net, `defineScript({ name: 'Noop' })`, 'Noop');
+    const spawnedOnClient: number[] = [];
+    c.sync.on('spawned', (ev) => spawnedOnClient.push(ev.netId));
+    const e = h.sync.spawn('Avatar');
+    h.sync.despawn(e);
+    pump([h, c], net, 3);
+    expect(spawnedOnClient).toEqual([]);
+    expect(Array.from(c.engine.world.componentsOfType(NetworkIdentity)).filter((n) => n.spawned)).toHaveLength(0);
+  });
+
+  it('runs onOwnerInput only where the entity is simulated: on the host, not on the client copy', async () => {
+    const net = new MemoryNetwork();
+    const source = `defineScript({ name: 'Counter', onOwnerInput(ctx) { ctx.state.n = (ctx.state.n || 0) + 1; } })`;
+    const [h, c] = await scriptedPeers(net, source, 'Counter');
+    const e = h.sync.spawn('Avatar', { ownerId: c.transport.localId });
+    pump([h, c], net, 3);
+    const ce = c.sync.entityOf(h.sync.netIdOf(e));
+    expect(ce).not.toBe(NULL_ENTITY);
+    for (let t = 1; t <= 5; t++) {
+      c.sync.submitInput(snap(t, { moveX: 1 }));
+      pump([h, c], net, 1);
+    }
+    expect(h.sync.simulatesEntity(e)).toBe(true);
+    expect(c.sync.simulatesEntity(ce)).toBe(false);
+    expect(h.engine.scripting.instanceOf(e)!.ctx.state.n).toBeGreaterThan(3);
+    expect(c.engine.scripting.instanceOf(ce)!.ctx.state.n).toBeUndefined();
+  });
+
+  it('keeps a press edge when two client ticks arrive between two host steps', async () => {
+    const net = new MemoryNetwork();
+    const h = await makePeer(net, 'g');
+    const c = await makePeer(net, 'g');
+    pump([h, c], net, 2);
+    const e = h.sync.spawn('Player', { ownerId: c.transport.localId });
+    pump([h, c], net, 2);
+    const pi = h.engine.world.getComponent(e, PlayerInput)!;
+    c.sync.submitInput(snap(1, {}, ['jump'], ['jump']));
+    c.sync.submitInput(snap(2, {}, [], [])); // key already released on the client
+    net.flush();
+    h.engine.step(1 / 60);
+    expect(pi.pressed('jump')).toBe(true);
+    expect(pi.held('jump')).toBe(false);
+    h.engine.step(1 / 60);
+    expect(pi.pressed('jump')).toBe(false); // edge delivered exactly once
+  });
+});
 
 describe('LockstepSync', () => {
   const moverScript = `defineScript({ name: 'Mover', onOwnerInput(ctx, s, dt) { ctx.transform.x += (s.axes.moveX || 0) * 3 * dt; if (s.held.includes('jump')) ctx.state.jumps = (ctx.state.jumps || 0) + 1; ctx.transform.y += ctx.random.range(-0.01, 0.01); } })`;
