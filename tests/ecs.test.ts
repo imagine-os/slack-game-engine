@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  World, Component, registerComponent, Transform, Name, Tag, saveScene, loadScene,
+  World, Component, registerComponent, Transform, Tag, saveScene, loadScene,
   createPrefab, instantiatePrefab, NULL_ENTITY, Vec2, Color, createSystem, Registry,
 } from '../src/index';
 

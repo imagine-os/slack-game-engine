@@ -1,0 +1,31 @@
+html, body, #app { height: 100%; }
+body { overflow: hidden; }
+#app { position: relative; background: #000; }
+#app canvas { display: block; width: 100%; height: 100%; }
+
+.player-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  z-index: 20;
+  transition: opacity 0.3s;
+}
+.player-loading[hidden] { display: none; }
+.player-loading .box { text-align: center; width: min(360px, 80vw); }
+.player-loading h1 { font-size: 22px; margin: 0 0 12px; }
+.player-loading progress { width: 100%; height: 8px; accent-color: var(--accent); }
+.player-loading .error { color: var(--danger); white-space: pre-wrap; font-family: var(--mono); font-size: 13px; text-align: left; }
+
+.player-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 15;
+  opacity: 0.75;
+}
+.player-bar:hover, .player-bar:focus-within { opacity: 1; }
+.player-bar button { padding: 6px 10px; font-size: 12px; background: rgba(21, 24, 35, 0.85); }

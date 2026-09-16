@@ -25,7 +25,7 @@ export class Quat implements QuatLike {
     return new Quat().setAxisAngle(axis, rad);
   }
 
-  /** Quaternion from Euler angles (radians) applied in ZYX order (yaw-pitch-roll). */
+  /** Quaternion from Euler angles (radians): roll x, pitch y, yaw z (see {@link setEuler}). */
   static fromEuler(x: number, y: number, z: number): Quat {
     return new Quat().setEuler(x, y, z);
   }
@@ -61,22 +61,19 @@ export class Quat implements QuatLike {
     return this.set(axis.x * s, axis.y * s, axis.z * s, Math.cos(h));
   }
 
+  /** Set from Euler angles (radians): roll `x`, pitch `y`, yaw `z`, applied as Rz * Ry * Rx. */
   setEuler(x: number, y: number, z: number): this {
-    const c1 = Math.cos(x / 2);
-    const c2 = Math.cos(y / 2);
-    const c3 = Math.cos(z / 2);
-    const s1 = Math.sin(x / 2);
-    const s2 = Math.sin(y / 2);
-    const s3 = Math.sin(z / 2);
-    // XYZ intrinsic order.
-    this.x = s1 * c2 * c3 + c1 * s2 * s3;
-    this.y = c1 * s2 * c3 - s1 * c2 * s3;
-    this.z = c1 * c2 * s3 + s1 * s2 * c3;
-    this.w = c1 * c2 * c3 - s1 * s2 * s3;
+    const cr = Math.cos(x / 2), sr = Math.sin(x / 2);
+    const cp = Math.cos(y / 2), sp = Math.sin(y / 2);
+    const cy = Math.cos(z / 2), sy = Math.sin(z / 2);
+    this.w = cr * cp * cy + sr * sp * sy;
+    this.x = sr * cp * cy - cr * sp * sy;
+    this.y = cr * sp * cy + sr * cp * sy;
+    this.z = cr * cp * sy - sr * sp * cy;
     return this;
   }
 
-  /** Euler angles (radians, XYZ order) equivalent to this rotation. */
+  /** Euler angles (radians) equivalent to this rotation; inverse of {@link setEuler}. */
   toEuler(out = new Vec3()): Vec3 {
     const { x, y, z, w } = this;
     const sinrCosp = 2 * (w * x + y * z);
@@ -202,9 +199,9 @@ export class Quat implements QuatLike {
   /** Orient so that -Z looks along `dir` with the given up vector. */
   lookRotation(dir: Vec3Like, up: Vec3Like = Vec3.UP): this {
     const f = new Vec3().copy(dir).normalize();
-    const r = new Vec3().copy(up).cross(f).normalize();
+    const r = new Vec3().copy(f).cross(up).normalize();
     if (r.lengthSq() < EPSILON) r.set(1, 0, 0);
-    const u = new Vec3().copy(f).cross(r);
+    const u = new Vec3().copy(r).cross(f);
     // Build rotation matrix columns: right=r, up=u, back=-f
     const m00 = r.x;
     const m01 = u.x;

@@ -207,7 +207,7 @@ describe('Physics3DWorld', () => {
     const phys = new Physics3DWorld();
     const floor = w.createEntity();
     w.getComponent(floor, Transform)!.setPosition(0, -0.5, 0);
-    w.addComponent(floor, RigidBody3D, { bodyType: 'static' });
+    w.addComponent(floor, RigidBody3D, { bodyType: 'static', restitution: 0 });
     w.addComponent(floor, BoxCollider3D, { size: { x: 20, y: 1, z: 20 } });
     const ball = w.createEntity();
     w.getComponent(ball, Transform)!.setPosition(0, 4, 0);

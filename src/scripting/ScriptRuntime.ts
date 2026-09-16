@@ -33,7 +33,7 @@ interface Instance {
 }
 
 /** Globals shadowed inside user scripts so they cannot reach the page by accident. */
-const SHADOWED_GLOBALS = ['window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames', 'location', 'navigator', 'fetch', 'XMLHttpRequest', 'WebSocket', 'localStorage', 'sessionStorage', 'indexedDB', 'eval', 'Function', 'importScripts', 'alert', 'prompt', 'confirm', 'open'];
+const SHADOWED_GLOBALS = ['window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames', 'location', 'navigator', 'fetch', 'XMLHttpRequest', 'WebSocket', 'localStorage', 'sessionStorage', 'indexedDB', 'Function', 'importScripts', 'alert', 'prompt', 'confirm', 'open'];
 
 /**
  * Compiles user scripts, instantiates them per `Script` component and drives
@@ -171,8 +171,8 @@ export class ScriptRuntime {
       inst.errors = 0;
       this.mergeProps(inst);
       if (inst.started) {
-        this.call(inst, 'onReload', (d) => d.onReload!(inst.ctx));
-        if (rerunStart) this.call(inst, 'onStart', (d) => d.onStart!(inst.ctx));
+        this.invoke(inst, 'onReload');
+        if (rerunStart) this.invoke(inst, 'onStart');
       }
     }
   }
@@ -200,7 +200,7 @@ export class ScriptRuntime {
     const inst = this.instances.get(entity);
     if (!inst) return;
     this.instances.delete(entity);
-    if (inst.started) this.call(inst, 'onDestroy', (d) => d.onDestroy!(inst.ctx));
+    if (inst.started) this.invoke(inst, 'onDestroy');
     inst.timers.length = 0;
   }
 
@@ -233,10 +233,10 @@ export class ScriptRuntime {
     for (const inst of this.instances.values()) {
       if (inst.started || inst.disabled || !inst.component.enabled) continue;
       inst.started = true;
-      this.call(inst, 'onStart', (d) => d.onStart!(inst.ctx));
+      this.invoke(inst, 'onStart');
       if (this.engine.world.hasComponent(inst.entity, 'NetworkIdentity')) {
         const owner = (this.engine.world.getComponent(inst.entity, 'NetworkIdentity') as unknown as { ownerId: string }).ownerId;
-        this.call(inst, 'onNetSpawn', (d) => d.onNetSpawn!(inst.ctx, owner));
+        this.invoke(inst, 'onNetSpawn', owner);
       }
     }
   }
@@ -247,7 +247,7 @@ export class ScriptRuntime {
     for (const inst of this.instances.values()) {
       if (!this.active(inst)) continue;
       this.tickTimers(inst, dt);
-      if (inst.def.onUpdate) this.call(inst, 'onUpdate', (d) => d.onUpdate!(inst.ctx, dt));
+      this.invoke(inst, 'onUpdate', dt);
     }
   }
 
@@ -257,16 +257,16 @@ export class ScriptRuntime {
       if (!this.active(inst)) continue;
       if (inst.def.onOwnerInput) {
         const pi = this.engine.world.getComponent(inst.entity, PlayerInput);
-        if (pi) this.call(inst, 'onOwnerInput', (d) => d.onOwnerInput!(inst.ctx, pi.snapshot, dt));
+        if (pi) this.invoke(inst, 'onOwnerInput', pi.snapshot, dt);
       }
-      if (inst.def.onFixedUpdate) this.call(inst, 'onFixedUpdate', (d) => d.onFixedUpdate!(inst.ctx, dt));
+      this.invoke(inst, 'onFixedUpdate', dt);
     }
   }
 
   lateUpdate(dt: number): void {
     for (const inst of this.instances.values()) {
-      if (!this.active(inst) || !inst.def.onLateUpdate) continue;
-      this.call(inst, 'onLateUpdate', (d) => d.onLateUpdate!(inst.ctx, dt));
+      if (!this.active(inst)) continue;
+      this.invoke(inst, 'onLateUpdate', dt);
     }
   }
 
@@ -274,24 +274,24 @@ export class ScriptRuntime {
   message(name: string, data: unknown, target?: Entity): void {
     for (const inst of this.instances.values()) {
       if (target !== undefined && inst.entity !== target) continue;
-      if (!this.active(inst) || !inst.def.onMessage) continue;
-      this.call(inst, 'onMessage', (d) => d.onMessage!(inst.ctx, name, data));
+      if (!this.active(inst)) continue;
+      this.invoke(inst, 'onMessage', name, data);
     }
   }
 
   /** Deliver an RPC to the script on `entity`. */
   rpc(entity: Entity, name: string, args: unknown[], from: string): void {
     const inst = this.instances.get(entity);
-    if (inst && this.active(inst) && inst.def.onRpc) this.call(inst, 'onRpc', (d) => d.onRpc!(inst.ctx, name, args, from));
+    if (inst && this.active(inst)) this.invoke(inst, 'onRpc', name, args, from);
   }
 
   private dispatchCollision(hook: 'onCollisionEnter' | 'onCollisionExit' | 'onTriggerEnter' | 'onTriggerExit', ev: CollisionEvent): void {
     const a = this.instances.get(ev.a);
     const b = this.instances.get(ev.b);
-    if (a && this.active(a) && a.def[hook]) this.call(a, hook, (d) => d[hook]!(a.ctx, ev.b, ev));
+    if (a && this.active(a)) this.invoke(a, hook, ev.b, ev);
     if (b && this.active(b) && b.def[hook]) {
       const flipped: CollisionEvent = { ...ev, a: ev.b, b: ev.a, normal: ev.normal.clone().negate() };
-      this.call(b, hook, (d) => d[hook]!(b.ctx, ev.a, flipped));
+      this.invoke(b, hook, ev.a, flipped);
     }
   }
 
@@ -311,6 +311,13 @@ export class ScriptRuntime {
         else { t.active = false; timers.splice(i, 1); }
       }
     }
+  }
+
+  /** Call a hook if the definition implements it, with error isolation. */
+  private invoke(inst: Instance, hook: ScriptHook, ...args: unknown[]): void {
+    const fn = inst.def[hook] as ((...a: unknown[]) => void) | undefined;
+    if (typeof fn !== 'function') return;
+    this.call(inst, hook, (def) => fn.call(def, inst.ctx, ...args));
   }
 
   private call(inst: Instance, hook: ScriptHook, fn: (def: ScriptDefinition) => void): void {
