@@ -189,10 +189,14 @@ re-applies the simulation policy and emits `ownershipChanged` everywhere.
 
 **Host migration.** When the transport reports `host-changed`, the new host
 adopts the entity table (`nextNetId = max + 1`), re-enables physics for
-host-authority entities, takes over entities the old host owned, drops the
-old host from the roster (`playerLeft`) and broadcasts `takeover`; clients
-reset interpolation and re-`hello`, receiving a fresh `welcome` + keyframe.
-Everyone gets `hostChanged { hostId, previous, isHost }`.
+host-authority entities, takes over scene entities the old host owned and
+broadcasts `takeover`; clients reset interpolation and re-`hello`, receiving
+a fresh `welcome` + keyframe. Then, in this order: `hostChanged { hostId,
+previous, isHost }` (the `ScriptRuntime` forwards it to scripts as
+`onHostChanged`), `playerLeft` for the old host, and finally any spawned
+entity the old host still owns is reassigned to the new host
+(`ownershipChanged`). A manager that subscribes in `onHostChanged` therefore
+sees the old host leave and can despawn its avatar itself.
 
 **Events**: `connected`, `disconnected`, `playerJoined`, `playerLeft`,
 `spawned`, `despawned`, `ownershipChanged`, `rpc`, `hostChanged`. Local

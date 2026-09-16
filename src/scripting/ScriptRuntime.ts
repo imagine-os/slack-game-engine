@@ -6,6 +6,7 @@ import type { World } from '../core/ecs/World';
 import * as MathNS from '../core/math';
 import type { Engine } from '../core/Engine';
 import { PlayerInput } from '../input/PlayerInput';
+import type { NetSync } from '../net/NetSync';
 import type { CollisionEvent } from '../physics/Physics2DWorld';
 import { Script } from './Script';
 import type { ScriptContext, TimerHandle } from './ScriptContext';
@@ -52,6 +53,7 @@ export class ScriptRuntime {
   private instances = new Map<Entity, Instance>();
   private nextId = 1;
   private unsub: (() => void)[] = [];
+  private syncUnsub: (() => void) | null = null;
 
   constructor(readonly engine: Engine) {
     const world = engine.world;
@@ -68,7 +70,21 @@ export class ScriptRuntime {
       engine.physics.events.on('collisionExit', (ev) => this.dispatchCollision('onCollisionExit', ev)),
       engine.physics.events.on('triggerEnter', (ev) => this.dispatchCollision('onTriggerEnter', ev)),
       engine.physics.events.on('triggerExit', (ev) => this.dispatchCollision('onTriggerExit', ev)),
+      engine.net.events.on('syncChanged', (sync) => this.bindSync(sync)),
     );
+    this.bindSync(engine.net.sync);
+  }
+
+  /** Forward the sync's `hostChanged` to every running script as `onHostChanged`. */
+  private bindSync(sync: NetSync | null): void {
+    this.syncUnsub?.();
+    this.syncUnsub = null;
+    if (!sync) return;
+    this.syncUnsub = sync.on('hostChanged', (e) => {
+      for (const inst of Array.from(this.instances.values())) {
+        if (this.active(inst)) this.invoke(inst, 'onHostChanged', e.isHost, { hostId: e.hostId, previous: e.previous });
+      }
+    });
   }
 
   // ----------------------------------------------------------- definitions
@@ -444,6 +460,8 @@ export class ScriptRuntime {
   dispose(): void {
     for (const u of this.unsub) u();
     this.unsub.length = 0;
+    this.syncUnsub?.();
+    this.syncUnsub = null;
     this.instances.clear();
   }
 }

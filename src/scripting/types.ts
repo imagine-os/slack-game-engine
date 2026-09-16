@@ -49,6 +49,13 @@ export interface ScriptDefinition {
   /** Networked entity was spawned locally (host or remote). */
   onNetSpawn?(ctx: ScriptContext, ownerId: string): void;
   /**
+   * The room's host changed (host migration). `isHost` is true on the peer
+   * that took over: that is where a manager script should start serving
+   * (spawning players, running waves or AI). The old host's `playerLeft`
+   * follows this hook, so handlers installed here see it.
+   */
+  onHostChanged?(ctx: ScriptContext, isHost: boolean, info: { hostId: string; previous: string }): void;
+  /**
    * Each fixed step when the entity has a PlayerInput: receives the merged
    * snapshot of whoever controls it (local or remote). Prefer this over
    * `ctx.input` for anything that must work in multiplayer.

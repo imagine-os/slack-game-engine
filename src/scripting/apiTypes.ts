@@ -34,6 +34,8 @@ interface ScriptDefinition {
   onTriggerEnter?(ctx: ScriptContext, other: Entity, info: CollisionEvent): void;
   onTriggerExit?(ctx: ScriptContext, other: Entity, info: CollisionEvent): void;
   onNetSpawn?(ctx: ScriptContext, ownerId: string): void;
+  /** Host migration: \`isHost\` is true on the peer that took over and should start serving. */
+  onHostChanged?(ctx: ScriptContext, isHost: boolean, info: { hostId: string; previous: string }): void;
   /** Input of whoever controls this entity (works for local and remote players). */
   onOwnerInput?(ctx: ScriptContext, snapshot: InputSnapshot, dt: number): void;
   onMessage?(ctx: ScriptContext, name: string, data: unknown): void;

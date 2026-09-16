@@ -85,9 +85,33 @@ HUD or other host-only state that guests should see travels as an RPC on the
 manager entity: `ctx.net.rpc('hud', [payload], 'others')` on the host and
 `onRpc(ctx, name, args)` on every peer (see the demos' `GameManager` scripts).
 
-Check `ctx.net.isHost` inside handlers (not once at start): after host
-migration the new host's `GameManager` starts receiving `playerJoined`/
-`playerLeft` and takes over spawning.
+### Host migration: `onHostChanged`
+
+When the host leaves, the transport elects a new one and every script gets
+`onHostChanged(ctx, isHost, { hostId, previous })`. On the peer where `isHost`
+is true, the manager must start serving: subscribe to `playerJoined`/
+`playerLeft`, adopt the entities that already exist (they were replicated to
+it while it was a guest) and start its timers, waves or AI. The old host's
+`playerLeft` fires right *after* this hook, so a handler installed here can
+despawn its avatar; anything it still owns afterwards is handed to the new
+host by the sync so it keeps simulating.
+
+```js
+onHostChanged(ctx, isHost) {
+  if (!isHost || ctx.state.serving) return;
+  ctx.state.serving = true;
+  for (const e of ctx.world.with('NetworkIdentity')) {          // adopt existing avatars
+    const ni = ctx.getOn(e, 'NetworkIdentity');
+    if (ni.prefab === 'Player') spawned[ni.ownerId] = e;
+  }
+  for (const p of sync.players()) spawnFor(p.peerId);             // anyone without one
+  sync.on('playerJoined', ...); sync.on('playerLeft', ...);       // as in onStart
+}
+```
+
+Guest copies of a manager keep the host's HUD state from the `hud` RPC, so
+the new host can continue scores, teams or waves from it (the demos'
+`GameManager` scripts do exactly this in `becomeHost`).
 
 Useful `ScriptContext.net` members: `localId`, `isHost`, `online`,
 `owner()`, `isOwner()`, `spawn(prefab, { ownerId, position })`,
@@ -145,10 +169,13 @@ See `tests/net.test.ts` for complete examples of every feature.
 
 ## Limits and notes
 
-- Host-authoritative: the host must stay online; when it leaves, the
-  transport elects a new host who resumes from the last replicated state
-  (entities the old host owned are handed to the new host; your
-  `playerLeft` handler decides whether to despawn them).
+- Host-authoritative: when the host leaves, the transport elects a new host
+  who resumes from the last replicated state. Order of events on every peer:
+  `hostChanged` (scripts: `onHostChanged`), then `playerLeft` for the old
+  host (despawn its avatar here), then any entity the old host still owns is
+  handed to the new host. Timers and `ctx.state` of the old host's manager
+  are gone; the new host rebuilds them from the replicated world and the
+  last HUD RPC.
 - Lockstep needs all players present before Start; late join is refused.
 - WebRTC through public signalling can fail behind symmetric NATs; fall back
   to `net=ws` or configure a TURN server via `PeerTransportOptions.iceServers`.

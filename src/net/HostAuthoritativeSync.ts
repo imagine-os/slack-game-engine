@@ -1118,6 +1118,13 @@ export class HostAuthoritativeSync implements NetSync {
     }
   }
 
+  /**
+   * Host migration. Order matters for game code: the sync state is rebuilt
+   * first, then `hostChanged` fires (scripts get `onHostChanged` and the new
+   * host's manager subscribes and adopts the entities it sees), then the old
+   * host's `playerLeft` fires so that handler can despawn its avatar, and
+   * finally whatever the old host still owns is handed to the new host.
+   */
   private onHostChanged(hostId: PeerId): void {
     const previous = this.hostIdCache;
     this.hostIdCache = hostId;
@@ -1127,18 +1134,20 @@ export class HostAuthoritativeSync implements NetSync {
     this.clients.clear();
     this.inputs.clear();
     this.history.clear();
-    if (previous) this.removePlayer(previous);
+    const hadPrevious = previous ? this.roster.delete(previous) : false;
+    const world = this.engine.world;
     if (hostId === this.localId) {
-      // Take over: adopt the entity table, re-enable physics for host-authority entities.
+      // Take over: adopt the entity table and re-enable physics for host-authority entities.
+      // Scene-authored entities the old host owned (puck, doors...) become ours right away;
+      // spawned prefabs keep their owner until the `playerLeft` below has run (see the tail).
       let max = 0;
-      for (const ni of this.engine.world.componentsOfType(NetworkIdentity)) {
+      for (const ni of world.componentsOfType(NetworkIdentity)) {
         if (ni.netId > max) max = ni.netId;
-        if (ni.ownerId === previous) ni.ownerId = hostId;
-        const pi = this.engine.world.getComponent(ni.entity, PlayerInput);
-        if (pi && pi.owner === previous) pi.owner = hostId;
+        if (ni.ownerId === previous && !ni.spawned) this.reassignOwner(ni, hostId);
         this.applyPolicy(ni.entity, ni);
       }
       this.nextNetId = Math.max(this.nextNetId, max + 1);
+      this.pendingSpawns.length = 0;
       this.roster.set(this.localId, { peerId: this.localId, name: this.engine.net.displayName || this.localId });
       for (const p of this.roster.values()) {
         if (p.peerId !== this.localId) this.clients.set(p.peerId, { peerId: p.peerId, name: p.name, acked: 0, sinceKeyframe: 0 });
@@ -1146,10 +1155,29 @@ export class HostAuthoritativeSync implements NetSync {
       const msg: Ctl = { t: 'takeover', tick: this.tick };
       this.ctl.send('all', msg);
     } else {
-      for (const ni of this.engine.world.componentsOfType(NetworkIdentity)) this.applyPolicy(ni.entity, ni);
+      for (const ni of world.componentsOfType(NetworkIdentity)) this.applyPolicy(ni.entity, ni);
       this.sendHello();
     }
     this.events.emit('hostChanged', { hostId, previous, isHost: hostId === this.localId });
+    if (hadPrevious) this.events.emit('playerLeft', { peerId: previous });
+    if (hostId === this.localId && previous) {
+      // Whatever the game left behind (or a game without a `playerLeft` handler) is now ours,
+      // so it keeps simulating and can still be despawned or handed on.
+      for (const ni of Array.from(world.componentsOfType(NetworkIdentity))) {
+        if (ni.ownerId === previous && this.byNetId.get(ni.netId) === ni.entity) this.reassignOwner(ni, hostId);
+      }
+    }
+  }
+
+  /** Local owner rewrite without a network message (host migration bookkeeping). */
+  private reassignOwner(ni: NetworkIdentity, ownerId: PeerId): void {
+    const previous = ni.ownerId;
+    ni.ownerId = ownerId;
+    ni.sharedWith = ni.sharedWith.filter((p) => p !== ownerId);
+    const pi = this.engine.world.getComponent(ni.entity, PlayerInput);
+    if (pi) { pi.owner = ownerId; pi.coOwners = pi.coOwners.filter((p) => p !== ownerId); }
+    this.applyPolicy(ni.entity, ni);
+    this.events.emit('ownershipChanged', { entity: ni.entity, ownerId, previous });
   }
 
   // ---------------------------------------------------------------- roster

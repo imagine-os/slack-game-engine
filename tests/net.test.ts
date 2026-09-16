@@ -608,6 +608,104 @@ describe('HostAuthoritativeSync spawn state and client scripts', () => {
     expect(c.engine.scripting.instanceOf(ce)!.ctx.state.n).toBeUndefined();
   });
 
+  it('runs onHostChanged on the new host, which takes over spawning and despawns the old host\'s avatar', async () => {
+    const net = new MemoryNetwork();
+    // A GameManager-style script: spawns one Avatar per player, adopts what exists when it takes over.
+    const source = `defineScript({
+      name: 'GM',
+      onStart(ctx) { ctx.state.avatars = {}; ctx.state.hostCalls = []; if (ctx.net.isHost) this.serve(ctx); },
+      onHostChanged(ctx, isHost, info) { ctx.state.hostCalls.push([isHost, info.previous]); if (isHost) this.serve(ctx); },
+      serve(ctx) {
+        const s = ctx.state, sync = ctx.net.hub.sync;
+        if (s.serving) return;
+        s.serving = true;
+        for (const e of ctx.world.with('NetworkIdentity')) { const ni = ctx.getOn(e, 'NetworkIdentity'); if (ni.prefab === 'Avatar') s.avatars[ni.ownerId] = e; }
+        const spawnFor = (id) => { if (!s.avatars[id]) s.avatars[id] = ctx.net.spawn('Avatar', { ownerId: id }); };
+        for (const p of sync.players()) spawnFor(p.peerId);
+        sync.on('playerJoined', (e) => spawnFor(e.peerId));
+        sync.on('playerLeft', (e) => { const ent = s.avatars[e.peerId]; delete s.avatars[e.peerId]; if (ent !== undefined && ctx.world.isAlive(ent)) sync.despawn(ent); });
+      },
+    })`;
+    const peers: Peer[] = [];
+    const addPeer = async (name: string) => {
+      const p = await makePeer(net, 'g', name);
+      p.engine.scripting.consoleLogging = false;
+      p.engine.scripting.compile(source);
+      p.engine.prefabs.set('Avatar', avatarPrefab('Look'));
+      p.engine.scripting.compile(`defineScript({ name: 'Look' })`);
+      const gm = p.engine.world.createEntity('GameManager');
+      p.engine.world.addComponent(gm, Script, { script: 'GM' });
+      peers.push(p);
+      return p;
+    };
+    const h = await addPeer('H');
+    pump(peers, net, 3);
+    const c1 = await addPeer('C1');
+    const c2 = await addPeer('C2');
+    pump(peers, net, 6);
+    const avatars = (p: Peer) => Array.from(p.engine.world.componentsOfType(NetworkIdentity)).filter((n) => n.prefab === 'Avatar').map((n) => n.ownerId).sort();
+    const ids = [h, c1, c2].map((p) => p.transport.localId).sort();
+    for (const p of peers) expect(avatars(p)).toEqual(ids);
+    const gmState = (p: Peer) => p.engine.scripting.instanceOf(p.engine.world.findByName('GameManager')!)!.ctx.state as { hostCalls: [boolean, string][]; serving?: boolean };
+
+    await h.transport.disconnect();
+    peers.splice(peers.indexOf(h), 1);
+    pump(peers, net, 8);
+    expect(c1.sync.isHost).toBe(true);
+    expect(gmState(c1).hostCalls).toEqual([[true, h.transport.localId]]);
+    expect(gmState(c2).hostCalls).toEqual([[false, h.transport.localId]]);
+    expect(gmState(c2).serving).toBeUndefined();
+    // The new host's manager adopted the two remaining avatars and despawned the old host's.
+    const remaining = [c1, c2].map((p) => p.transport.localId).sort();
+    expect(avatars(c1)).toEqual(remaining);
+    expect(avatars(c2)).toEqual(remaining);
+    // Their bodies simulate on the new host again and the roster is clean.
+    for (const ni of c1.engine.world.componentsOfType(NetworkIdentity)) expect(c1.engine.world.getComponent(ni.entity, RigidBody2D)!.bodyType).toBe('dynamic');
+    expect(c1.sync.players().map((p) => p.displayName).sort()).toEqual(['C1', 'C2']);
+
+    // A late joiner is spawned by the new host and sees everyone.
+    const c3 = await addPeer('C3');
+    pump(peers, net, 8);
+    const all = [c1, c2, c3].map((p) => p.transport.localId).sort();
+    for (const p of peers) expect(avatars(p)).toEqual(all);
+    // The newcomer's input reaches its avatar on the new host.
+    const mine = Array.from(c1.engine.world.componentsOfType(NetworkIdentity)).find((n) => n.ownerId === c3.transport.localId)!;
+    c3.sync.submitInput(snap(1, { moveX: 1 }, ['fire']));
+    pump(peers, net, 3);
+    expect(c1.engine.world.getComponent(mine.entity, PlayerInput)!.axis('moveX')).toBe(1);
+  });
+
+  it('hands scene entities and unclaimed spawns of the old host to the new host', async () => {
+    const net = new MemoryNetwork();
+    const h = await makePeer(net, 'g', 'H');
+    const puck = h.engine.world.createEntity('Puck');
+    h.engine.world.addComponent(puck, NetworkIdentity);
+    h.engine.world.addComponent(puck, RigidBody2D);
+    const c1 = await makePeer(net, 'g', 'C1');
+    const cPuck = c1.engine.world.createEntity('Puck');
+    c1.engine.world.addComponent(cPuck, NetworkIdentity);
+    c1.engine.world.addComponent(cPuck, RigidBody2D);
+    pump([h, c1], net, 3);
+    expect(c1.engine.world.getComponent(cPuck, NetworkIdentity)!.ownerId).toBe(h.transport.localId);
+    const avatar = h.sync.spawn('Player', { ownerId: h.transport.localId });
+    pump([h, c1], net, 3);
+    const netId = h.sync.netIdOf(avatar);
+    const order: string[] = [];
+    c1.sync.on('hostChanged', () => order.push('hostChanged'));
+    c1.sync.on('playerLeft', (e) => order.push(`playerLeft:${e.peerId}`));
+    c1.sync.on('ownershipChanged', (e) => order.push(`owner:${c1.engine.world.nameOf(e.entity)}`));
+    await h.transport.disconnect();
+    pump([c1], net, 3);
+    // Scene entity first, then the hook, then the departure, then the leftover avatar.
+    expect(order).toEqual(['owner:Puck', 'hostChanged', `playerLeft:${h.transport.localId}`, 'owner:Player']);
+    const me = c1.transport.localId;
+    expect(c1.engine.world.getComponent(cPuck, NetworkIdentity)!.ownerId).toBe(me);
+    const ni = c1.engine.world.getComponent(c1.sync.entityOf(netId), NetworkIdentity)!;
+    expect(ni.ownerId).toBe(me);
+    expect(c1.engine.world.getComponent(ni.entity, PlayerInput)!.owner).toBe(me);
+    expect(c1.engine.world.getComponent(ni.entity, RigidBody2D)!.bodyType).toBe('dynamic');
+  });
+
   it('keeps a press edge when two client ticks arrive between two host steps', async () => {
     const net = new MemoryNetwork();
     const h = await makePeer(net, 'g');
