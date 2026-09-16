@@ -25,6 +25,27 @@
 .hero p { margin: 0; color: var(--text-dim); font-size: 17px; max-width: 60ch; }
 .hero .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* "How multiplayer works" explainer. */
+.howto {
+  margin: 20px 0 0;
+  padding: 0 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.howto summary { cursor: pointer; padding: 12px 0; color: var(--text); font-weight: 600; font-size: 15px; }
+.howto summary:hover { color: var(--accent-2); }
+.howto[open] summary { border-bottom: 1px solid var(--border); }
+.howto p { margin: 12px 0; max-width: 80ch; }
+.howto dl { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; gap: 6px 16px; margin: 0 0 12px; }
+.howto dt { color: var(--text); font-weight: 600; }
+.howto dd { margin: 0; }
+.howto code { font-family: var(--mono, monospace); font-size: 12px; background: var(--bg-elev-2); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+@media (max-width: 560px) { .howto dl { grid-template-columns: 1fr; } .howto dd { margin-bottom: 6px; } }
+
 .section-title {
   display: flex;
   align-items: baseline;

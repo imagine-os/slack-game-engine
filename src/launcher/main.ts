@@ -198,6 +198,7 @@ async function render(): Promise<void> {
   actions.append(newBtn, editorBtn, importBtn);
   hero.appendChild(actions);
   app.appendChild(hero);
+  app.appendChild(multiplayerHelp());
 
   const demosTitle = el('div', 'section-title');
   demosTitle.id = 'demos';
@@ -206,8 +207,18 @@ async function render(): Promise<void> {
   demosTitle.appendChild(demoCount);
   app.appendChild(demosTitle);
   const demoGrid = el('section', 'grid');
-  demoGrid.setAttribute('aria-label', 'Demo projects');
+  demoGrid.setAttribute('aria-label', 'Demo games');
   app.appendChild(demoGrid);
+
+  const tplTitle = el('div', 'section-title');
+  tplTitle.id = 'templates';
+  tplTitle.appendChild(el('h2', undefined, 'Templates'));
+  const tplCount = el('span');
+  tplTitle.appendChild(tplCount);
+  app.appendChild(tplTitle);
+  const tplGrid = el('section', 'grid');
+  tplGrid.setAttribute('aria-label', 'Starter templates');
+  app.appendChild(tplGrid);
 
   const projTitle = el('div', 'section-title');
   projTitle.appendChild(el('h2', undefined, 'Your projects'));
@@ -229,15 +240,50 @@ async function render(): Promise<void> {
 
   const store = new ProjectStore();
   const [demos, projects] = await Promise.all([loadDemos(), store.list().catch(() => [] as ProjectSummary[])]);
-  demoCount.textContent = demos.length ? `${demos.length} available` : '';
-  if (demos.length === 0) {
+  const games = demos.filter((d) => !d.template);
+  const templates = demos.filter((d) => d.template);
+  demoCount.textContent = games.length ? `${games.length} available` : '';
+  if (games.length === 0) {
     demoGrid.appendChild(el('div', 'empty', 'No demos yet. Demo projects live in public/demos/ and are listed in public/demos/index.json.'));
-  } else for (const d of demos) demoGrid.appendChild(demoCard(d));
+  } else for (const d of games) demoGrid.appendChild(demoCard(d));
+  tplCount.textContent = templates.length ? `${templates.length} to start from` : '';
+  if (templates.length === 0) {
+    tplGrid.appendChild(el('div', 'empty', 'Starter templates are demos flagged "template" in public/demos/index.json; "New project" copies one.'));
+  } else for (const d of templates) tplGrid.appendChild(demoCard(d));
   projCount.textContent = projects.length ? `${projects.length} saved` : '';
   if (projects.length === 0) {
     projGrid.appendChild(el('div', 'empty', 'Projects you create in the editor are saved in this browser and appear here.'));
   } else for (const p of projects) projGrid.appendChild(projectCard(p, store, () => void render()));
   app.setAttribute('aria-busy', 'false');
+}
+
+/** Collapsible explainer for the three ways a room can be shared. */
+function multiplayerHelp(): HTMLElement {
+  const box = el('details', 'howto');
+  box.id = 'multiplayer';
+  const summary = el('summary', undefined, 'How multiplayer works');
+  box.appendChild(summary);
+  const intro = el('p', undefined, 'Every game here is a room. "Play Multiplayer" opens one with a fresh room code; the lobby\'s "Copy invite link" gives friends the URL. The first person in a room hosts and runs the simulation, everyone else sends input. If the host leaves, another player takes over.');
+  box.appendChild(intro);
+  const list = el('dl');
+  const row = (term: string, text: string, code?: string) => {
+    list.appendChild(el('dt', undefined, term));
+    const dd = el('dd', undefined, text);
+    if (code) { dd.appendChild(document.createTextNode(' ')); dd.appendChild(el('code', undefined, code)); }
+    list.appendChild(dd);
+  };
+  row('Different devices (default)', 'Peer-to-peer over WebRTC with a public signalling server: nothing to deploy, but every device needs internet access and strict NATs may need a TURN server.', '?room=CODE');
+  row('Trying it alone', 'Same-browser mode connects tabs of this browser without any network: open the same link in two tabs.', '?room=CODE&net=local');
+  row('Your own relay', 'Behind strict NATs or for a fixed address, run the bundled WebSocket relay (npm run serve, see server/README.md) and point rooms at it.', '?room=CODE&net=ws&server=wss://your-host/ws');
+  box.appendChild(list);
+  const more = el('p');
+  const link = el('a', undefined, 'docs/MULTIPLAYER.md');
+  link.href = 'https://github.com/imagine-os/slack-game-engine/blob/main/docs/MULTIPLAYER.md';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  more.append('Making your own game multiplayer takes five steps: ', link, '.');
+  box.appendChild(more);
+  return box;
 }
 
 function importProject(): void {

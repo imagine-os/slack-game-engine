@@ -75,14 +75,26 @@ export function parseNetParams(search: string): NetParams {
   };
 }
 
-/** Build a shareable invite URL: the current page with `room` (and `net`/`server` when set). */
+/**
+ * Build a shareable invite URL: the current page with `room`, the transport
+ * (`net=` is written whenever it is not the default, and an explicit `net=`
+ * already in the page URL is kept) and `server` when set. The personal
+ * `name` is dropped so the invitee picks their own.
+ */
 export function inviteUrl(params: NetParams, base: string = typeof location !== 'undefined' ? location.href : ''): string {
   const url = new URL(base || 'http://localhost/play.html');
   url.searchParams.set('room', params.room);
   if (params.net !== 'peer') url.searchParams.set('net', params.net);
-  else url.searchParams.delete('net');
   if (params.server) url.searchParams.set('server', params.server);
   url.searchParams.delete('name');
+  return url.toString();
+}
+
+/** The current page with a different transport (`?net=`), same room and name. */
+export function switchTransportUrl(net: TransportKind, base: string = typeof location !== 'undefined' ? location.href : ''): string {
+  const url = new URL(base || 'http://localhost/play.html');
+  url.searchParams.set('net', net);
+  if (net !== 'ws') url.searchParams.delete('server');
   return url.toString();
 }
 

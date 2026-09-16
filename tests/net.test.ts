@@ -3,7 +3,7 @@ import {
   Engine, Transform, PlayerInput, RigidBody2D, Script, Name, NULL_ENTITY,
   NetworkIdentity, NetTransform, MemoryNetwork, HostAuthoritativeSync, LockstepSync,
   ByteWriter, ByteReader, packQuat, unpackQuat, encodeWorldSnapshot, decodeWorldSnapshot, newEntityState, captureTransform, DEFAULT_POLICY,
-  createEmptySnapshot, markReplicated, parseNetParams, createTransport,
+  createEmptySnapshot, markReplicated, parseNetParams, createTransport, inviteUrl, switchTransportUrl,
   type PrefabData, type InputSnapshot, type WorldState, type MemoryTransport, type Entity, Component, registerComponent,
 } from '../src/index';
 
@@ -805,6 +805,26 @@ describe('createTransport / parseNetParams', () => {
     expect(parseNetParams('room=X&net=ws&server=wss://h/ws')).toEqual({ room: 'X', net: 'ws', server: 'wss://h/ws', name: '' });
     expect(parseNetParams('?net=bogus').net).toBe('peer');
     expect(parseNetParams('?net=local').net).toBe('local');
+  });
+
+  it('invite links keep the transport and server, keep an explicit net=, and drop the personal name', () => {
+    const local = new URL(inviteUrl({ room: 'ABC', net: 'local', server: '', name: 'Zoe' }, 'https://x.test/play.html?project=p&room=OLD&net=local&name=Zoe'));
+    expect(local.searchParams.get('room')).toBe('ABC');
+    expect(local.searchParams.get('net')).toBe('local');
+    expect(local.searchParams.get('project')).toBe('p');
+    expect(local.searchParams.has('name')).toBe(false);
+    const ws = new URL(inviteUrl({ room: 'R', net: 'ws', server: 'wss://h/ws', name: '' }, 'https://x.test/play.html?project=p'));
+    expect(ws.searchParams.get('net')).toBe('ws');
+    expect(ws.searchParams.get('server')).toBe('wss://h/ws');
+    // Default transport: nothing added, but a `net=` the page already carries is not stripped.
+    expect(new URL(inviteUrl({ room: 'R', net: 'peer', server: '', name: '' }, 'https://x.test/play.html?project=p')).searchParams.has('net')).toBe(false);
+    expect(new URL(inviteUrl({ room: 'R', net: 'peer', server: '', name: '' }, 'https://x.test/play.html?project=p&net=peer')).searchParams.get('net')).toBe('peer');
+    // Switching transport keeps room and name.
+    const sw = new URL(switchTransportUrl('local', 'https://x.test/play.html?project=p&room=R&name=Zoe&server=wss://h/ws'));
+    expect(sw.searchParams.get('net')).toBe('local');
+    expect(sw.searchParams.get('room')).toBe('R');
+    expect(sw.searchParams.get('name')).toBe('Zoe');
+    expect(sw.searchParams.has('server')).toBe(false);
   });
 
   it('creates memory transports on a shared network and rejects unknown kinds', async () => {

@@ -1,7 +1,7 @@
 import './lobby.css';
 import type { Engine } from '../../core/Engine';
 import type { NetParams } from '../createTransport';
-import { inviteUrl } from '../createTransport';
+import { inviteUrl, switchTransportUrl } from '../createTransport';
 import type { LockstepSync } from '../LockstepSync';
 
 /** Options for {@link NetLobbyOverlay}. */
@@ -30,6 +30,8 @@ export class NetLobbyOverlay {
   private list: HTMLElement;
   private status: HTMLElement;
   private error: HTMLElement;
+  private hint: HTMLElement;
+  private localBtn: HTMLButtonElement;
   private pill: HTMLElement;
   private startBtn: HTMLButtonElement | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -56,12 +58,14 @@ export class NetLobbyOverlay {
           </div>
         </div>
         <div class="net-lobby-status" aria-live="polite"></div>
-        <div class="net-lobby-error" hidden></div>
+        <div class="net-lobby-error" role="alert" hidden></div>
+        <p class="net-lobby-hint" hidden></p>
         <ul class="net-lobby-players"></ul>
         <div class="net-lobby-foot">
           <span class="net-lobby-transport"></span>
           <span class="net-lobby-spacer"></span>
           <button type="button" class="net-start" hidden>Start game</button>
+          <button type="button" class="net-local" hidden>Try same-browser (local) instead</button>
           <button type="button" class="net-offline">Play offline</button>
         </div>
       </div>
@@ -72,6 +76,10 @@ export class NetLobbyOverlay {
     this.list = root.querySelector('.net-lobby-players')!;
     this.status = root.querySelector('.net-lobby-status')!;
     this.error = root.querySelector('.net-lobby-error')!;
+    this.hint = root.querySelector('.net-lobby-hint')!;
+    this.hint.textContent = connectionHint(opts.params);
+    this.localBtn = root.querySelector<HTMLButtonElement>('.net-local')!;
+    this.localBtn.addEventListener('click', () => { location.href = switchTransportUrl('local'); });
     this.pill = root.querySelector('.net-lobby-pill')!;
     root.querySelector('.net-lobby-code')!.textContent = opts.params.room;
     root.querySelector('.net-lobby-transport')!.textContent = describeTransport(opts.params);
@@ -174,6 +182,9 @@ export class NetLobbyOverlay {
     const showError = this.phase === 'error' && !!this.message;
     this.error.hidden = !showError;
     if (showError) this.error.textContent = this.message;
+    // Connection trouble: explain what the transport needs and offer the no-network fallback.
+    this.hint.hidden = this.phase !== 'error';
+    this.localBtn.hidden = this.phase !== 'error' || this.opts.params.net === 'local';
     // Player list.
     this.list.replaceChildren(...players.map((p) => {
       const li = document.createElement('li');
@@ -210,6 +221,15 @@ export class NetLobbyOverlay {
     for (const off of this.unsub) off();
     this.unsub.length = 0;
     this.root.remove();
+  }
+}
+
+/** Why a connection can fail with this transport and what to try. */
+export function connectionHint(p: NetParams): string {
+  switch (p.net) {
+    case 'local': return 'Same-browser mode only reaches tabs of this browser on this device. Open the invite link in another tab here, or use a room link without net=local for other devices.';
+    case 'ws': return 'The relay server must be reachable at the given address (see server/README.md). Same-browser mode needs no server at all.';
+    default: return 'WebRTC needs internet access on every device to reach the signalling server, and behind strict NATs (some offices, mobile carriers) it can also need a TURN server or the relay (net=ws). To try the game alone, same-browser mode opens the room in tabs of this browser without any network.';
   }
 }
 
