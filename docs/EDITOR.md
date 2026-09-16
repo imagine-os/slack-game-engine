@@ -150,11 +150,13 @@ same script within two seconds the later receiver gets a conflict banner
 (**Keep mine** / **Take theirs**) instead of a silent overwrite. Remote edits
 go through the same mutation layer but never enter your undo stack.
 
-Transport: when the networking layer provides `engine.net.connect` /
-`engine.net.channel`, rooms work across devices. Without it, the editor falls
-back to a same-browser `BroadcastChannel` implementation, so you can test
-collaboration with two tabs of the same browser. Set `?net=local` to force the
-fallback.
+Transport: rooms use the networking layer (`engine.net.connect` /
+`engine.net.channel`). The editor tries `peer` (WebRTC via PeerJS
+signalling) first and falls back to `local` (BroadcastChannel between tabs
+of the same browser); `?net=peer|ws|local` forces a kind and is kept in the
+URL, so invite links inherit it (`ws` needs the relay from `npm run serve`,
+see `?server=`). If the networking layer is missing entirely, a built-in
+BroadcastChannel channel is used so two tabs can still collaborate.
 
 ## Keyboard shortcuts
 

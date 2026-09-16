@@ -404,7 +404,12 @@ export class EditorApp implements EditorContext {
     if (!name) return;
     this.project.project.thumbnail = this.viewport.thumbnail();
     await this.project.saveAsCopy(name);
-    history.replaceState(null, '', `?project=${encodeURIComponent(this.project.project.id)}${this.collab ? `&room=${this.collab.channel.roomId}` : ''}`);
+    const next = new URL(location.href);
+    next.searchParams.set('project', this.project.project.id);
+    next.searchParams.delete('template');
+    next.searchParams.delete('new');
+    if (this.collab) next.searchParams.set('room', this.collab.channel.roomId);
+    history.replaceState(null, '', next.toString());
     toast(`Saved "${name}" to this browser`, 'success');
     this.updateStatus();
   }
@@ -567,6 +572,7 @@ export class EditorApp implements EditorContext {
     }
     if (this.collab.following) { const pose = this.collab.follow(this.collab.following); if (pose) this.viewport.camera.setPose(pose); }
     this.hierarchy.render();
+    this.updateStatus();
   }
 
   private toggleFollow(id: string): void {

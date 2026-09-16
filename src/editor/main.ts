@@ -57,7 +57,11 @@ async function main(): Promise<void> {
     const renderer = newParam === '3d' ? '3d' : '2d';
     const doc = createProject({ name: params.get('name') ?? 'My Game', renderer });
     await store.save(doc);
-    history.replaceState(null, '', `?project=${encodeURIComponent(doc.id)}${room ? `&room=${room}` : ''}`);
+    const next = new URLSearchParams({ project: doc.id });
+    if (room) next.set('room', room);
+    const net = params.get('net');
+    if (net) next.set('net', net);
+    history.replaceState(null, '', `?${next.toString()}`);
     boot(doc, 'new', room);
     return;
   }
