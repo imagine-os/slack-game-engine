@@ -1,131 +1,239 @@
-# Networking model
+# Networking
 
-This directory holds the **interfaces and components** the core depends on.
-The networking worker implements them (`Transport` implementations, a
-`NetSync`, and the server in `server/`). Nothing in the engine assumes a
-particular wire format beyond these contracts.
+`src/net` implements Forge's multiplayer: pluggable **transports**, the
+**NetHub** (`engine.net`) that multiplexes channels over them, and two
+**NetSync** implementations (host-authoritative and lockstep). The user guide
+is `docs/MULTIPLAYER.md`; this file is the implementation reference.
+
+```
+scripts / editor / demos
+        │  ctx.net.*        engine.net.channel('editor')
+        ▼                          │
+┌──────────────────────────────────▼─────────────────────┐
+│ NetHub  (engine.net)                                    │
+│  channel(name) · presence · stats · connect(kind)       │
+│  sync: HostAuthoritativeSync | LockstepSync | null      │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Transport contract
+   ┌───────────┬───────────┼────────────┬────────────────┐
+   │ Memory    │ Local     │ Peer       │ WebSocket      │ Null (offline)
+   │ in-proc   │ Broadcast │ WebRTC via │ relay server   │
+   │ (tests)   │ Channel   │ PeerJS     │ server/index.js│
+```
 
 ## Concepts
 
-- **Room**: a named session (`?room=<id>` in `play.html`). The first peer to
-  join becomes the **host**; others are **clients**. The transport reports
-  `localId`, `isHost`, `peers` and `roomId` and emits `peer-join`,
-  `peer-leave`, `host-changed`.
-- **Peer id**: string assigned by the transport/server. `NullTransport` uses
-  `'local'` and is always host, so single-player is just "a room of one".
-- **Modes** (`project.settings.network.mode`):
-  - `none`: no networking; `NullTransport`.
-  - `host-authoritative`: the host simulates; clients send input and render
-    interpolated snapshots.
-  - `lockstep`: every peer simulates the same deterministic fixed steps from
-    the same inputs (needs deterministic physics/random, which the core
-    provides).
+- **Room**: a named session (`?room=<id>`). The first peer to join is the
+  **host**; others are **clients**. Transports report `localId`, `isHost`,
+  `hostId`, `peers`, `roomId` and emit `connected`, `peer-join`,
+  `peer-leave`, `host-changed`, `message`, `error`, `disconnected`.
+- **Peer id**: a string assigned by the transport. `NullTransport` uses
+  `'local'` and is always host, so single-player is "a room of one".
+- **Modes** (`project.settings.network.mode`): `none`, `host-authoritative`
+  (default multiplayer), `lockstep`.
+- **Owner mapping**: when a sync starts, every `PlayerInput.owner === 'local'`
+  and `NetworkIdentity.ownerId === 'host'` is rewritten to the host's peer id,
+  so a single-player scene automatically becomes "the host's player".
 
-## Host-authoritative flow (default multiplayer)
+## Choosing a transport
+
+| `?net=` | Class | When | Server needed |
+| --- | --- | --- | --- |
+| `peer` (default) | `PeerTransport` | Different devices, works from GitHub Pages | No (public PeerJS signalling; `?server=` for a self-hosted PeerServer) |
+| `local` | `LocalTransport` | Tabs of the same browser (testing, hot-seat) | No |
+| `ws` | `WebSocketTransport` | Strict NATs, fixed address, one process hosts game + relay | Yes: `npm run serve` (`server/README.md`), `?server=wss://host/ws` |
+| `memory` | `MemoryTransport` | Unit tests, in-process bots | No |
+
+`createTransport(kind, opts)` builds one; `parseNetParams(location.search)`
+reads `room`, `net`, `server`, `name`; `inviteUrl(params)` produces a link.
+`installNetworking(engine, { params, project, container })` does all of the
+above plus the sync and the lobby (this is what `play.html` calls).
+
+### Transport details
+
+- **MemoryTransport / MemoryNetwork**: virtual clock (`advance(ms)`,
+  `flush()`), `latency`, `jitter`, `loss` (unreliable only unless
+  `lossAffectsReliable`), seeded. Host = first to join, migrates to the next
+  in join order on leave.
+- **LocalTransport**: `BroadcastChannel('forge-room-<id>')`. A joiner says
+  `hello`; if no host answers within `discoveryMs` it becomes host. Every tab
+  heartbeats; when the host misses `timeoutMs` the member with the lowest
+  join sequence takes over (`host-changed`).
+- **PeerTransport**: star topology. The host owns the PeerJS id
+  `forge-<roomId>`; joiners `new Peer(thatId)`: success = host, `unavailable-id`
+  = connect to it as a client, `peer-unavailable` = clear error. Stable
+  transport ids (`peer-xxxx`) are independent of PeerJS ids so migration
+  keeps identities: on host loss clients re-claim `forge-<roomId>` in roster
+  order; the winner hosts and the rest rejoin. Reliable traffic uses the
+  PeerJS connection; `reliable:false` binary uses a negotiated
+  `RTCDataChannel` (`ordered:false, maxRetransmits:0`, id 42). ICE `failed`
+  emits an `error` with a TURN hint. `peerjs` is imported lazily so tests and
+  headless builds never touch the network.
+- **WebSocketTransport**: JSON text frames + `[0x01][len][id][payload]`
+  binary frames, server-side host assignment/migration, 2 s ping/pong RTT.
+  Default URL `ws(s)://<page host>/ws`.
+
+## NetHub (`engine.net`)
+
+- `setTransport(t)`, `setSync(s)`, `localId`, `isHost`, `hostId`, `roomId`,
+  `connected`, `online`.
+- `connect(kind, { roomId, displayName, serverUrl })` convenience.
+- `channel(name)` → `{ send(to, data, { reliable }), on(fn) }` where `to` is
+  a peer id, `'all'`/`'others'` (never echoed) or `'host'`. Objects are JSON
+  (`{ c: name, d }` envelope), `Uint8Array`/`ArrayBuffer` go binary
+  (`[0xC0][u8 nameLen][name][payload]`). Channels work before any sync exists;
+  names starting with `_` are reserved (`_hub`, `_sync`, `_snap`, `_lock`).
+  The editor's collaboration layer uses `engine.net.channel('editor')`.
+- `presence` → `{ peerId, displayName, isHost, isLocal, rtt }[]`; names come
+  from a hello on `_hub`, RTTs from pings sent by `update()` (called by the
+  syncs each frame and by the lobby timer).
+- `stats` → bytes/messages per second in/out, totals, last snapshot size and
+  RTT to the host (mean to clients when hosting).
+
+## Host-authoritative sync (`HostAuthoritativeSync`)
 
 ```
-client                          host
-  │  InputSnapshot (per tick)     │
-  ├──────────────────────────────▶│  PlayerInput.apply() for that peer's entities
-  │                               │  fixedUpdate: scripts (onOwnerInput) + physics
-  │   Snapshot @ tickRate         │  collect NetworkIdentity entities → delta vs last ack
-  │◀──────────────────────────────┤
-  │  NetTransform interpolation   │
+client                                    host
+  │ INPUT (tick, last 3 snapshots, ack)     │ fixedUpdate: PlayerInput.apply(merged) before scripts
+  ├────────────────────────────────────────▶│ fixedUpdate: scripts (onOwnerInput) + physics
+  │ SNAPSHOT @ tickRate (delta vs ack)      │ update: capture NetworkIdentity entities → history
+  │◀────────────────────────────────────────┤         encode delta per client vs its acked tick
+  │ InterpolationSystem (delay, extrapolate)│
+  │ ACK (tick)                              │
+  ├────────────────────────────────────────▶│
 ```
 
-1. **Input relay**: every fixed step the client calls
-   `sync.submitInput(engine.input.getSnapshot())`. Encode with
-   `encodeSnapshot(snapshot, actionNames, axisNames)`; the ordered name lists
-   come from `Input.actionNames()` / `axisNames()` and are identical on all
-   peers because they derive from `project.settings.input`. Send unreliably
-   with the tick number; include the last few ticks redundantly to survive
-   loss. The host writes the latest snapshot into `PlayerInput.apply()` for
-   every entity whose `owner` (or `coOwners`) is that peer, before the
-   `fixedUpdate` phase (Engine calls `sync.fixedUpdate(dt)` first).
-2. **Snapshot sync**: at `tickRate` (default 20 Hz) the host serializes
-   every entity with `NetworkIdentity.replicate` — `netId`, `ownerId`,
-   `Transform` (per `NetTransform` flags), velocity from `RigidBody2D`, and
-   any component fields marked for replication (suggested: a
-   `meta.fields[x].sync = true` convention added by the net worker). Use
-   **delta compression**: keep the last acknowledged snapshot per client and
-   send only changed fields beyond `positionThreshold`/`rotationThreshold`;
-   send a full keyframe on join and every N ticks. Quantize positions
-   (e.g. 1/1000 unit) and rotations (16-bit angles / smallest-three).
-3. **Client interpolation**: clients buffer snapshots and render
-   `interpolationDelay` ticks behind, lerping position and slerping rotation
-   between the two surrounding snapshots into `Transform`, extrapolating with
-   `targetVelocity` for up to `extrapolation` seconds when data is late, and
-   snapping when the error exceeds `teleportDistance`. Clients do not run
-   physics for replicated entities (set their `RigidBody2D.bodyType` to
-   `kinematic` locally or skip the physics system for them).
-4. **Spawning / despawning**: the host assigns `netId`s (monotonic) and
-   sends `spawn { netId, prefab, ownerId, authority, position }`; clients
-   call `instantiatePrefab` with the project's prefab (`engine.prefabs`) and
-   attach the identity. `despawn { netId }` destroys. Scripts get
-   `onNetSpawn(ctx, ownerId)`.
-5. **RPCs**: `sync.rpc(name, args, target, entity?)` sends reliably; the
-   receiver calls `engine.scripting.rpc(entity, name, args, from)` when an
-   entity is given (routes to the entity's script `onRpc`) or the handler
-   registered with `sync.onRpc(name, fn)`. Clients may only RPC the host or
-   `all` via the host (the host relays), which keeps the host authoritative.
-6. **Ownership transfer**: `sync.setOwner(entity, peerId)` (host) updates
-   `NetworkIdentity.ownerId` and `PlayerInput.owner`, sends
-   `owner { netId, ownerId }`, emits `ownershipChanged`. With
-   `authority: 'owner'` the owner sends its own transform snapshots (useful
-   for latency-sensitive player avatars) and the host relays them; with
-   `authority: 'host'` the host simulates from the owner's input.
-7. **Host migration** (optional): on host `peer-leave`, the transport picks
-   the lowest peer id as new host (`host-changed`); the new host resumes from
-   the last snapshot it has.
+Channels: `_sync` (reliable JSON control) and `_snap` (unreliable binary).
 
-## Shared control (multi-user on one entity)
+**Handshake.** A client sends `hello { name }`; the host answers
+`welcome { tick, hostId, players, entities[], nextNetId }` where `entities`
+lists every replicated entity (`netId, prefab, ownerId, authority,
+sharedWith, syncComponents, name, pos, rot`). The client instantiates
+prefab entities it lacks, reconciles scene entities by `netId` and destroys
+scene entities the host no longer has, then gets an immediate keyframe. The
+host broadcasts `joined` to the others. Scene-authored `NetworkIdentity`
+entities receive deterministic ids (`1..n` in load order) on every peer.
 
-Several users can be assigned to the same entity: `PlayerInput.owner` plus
-`PlayerInput.coOwners` / `NetworkIdentity.sharedWith`. Each step the host
-collects the latest snapshot from every controlling peer and merges them with
-`mergeSnapshots(snaps, strategy)` (`PlayerInput.mergeStrategy` or the project
-default in `settings.multiUser.mergeStrategy`):
+**Input.** Every fixed step (with `autoInput`, or via `submitInput`) a
+client sends `INPUT = [u8 2][u32 lastSnapshotTick][u8 n]{ u32 tick, u32 held,
+u32 pressed, u32 released, u8 axisCount, i16 axes..., u8 hasPointer,
+(f32 x, f32 y, u8 buttons) }×n` with the last `inputRedundancy` ticks. Action
+and axis names are `engine.input.actionNames()/axisNames()` (sorted; identical
+on all peers). The host keeps the newest snapshot per peer and, in
+`fixedUpdate` (before scripts), applies it to every `PlayerInput` whose
+`owner` is that peer. Edges (`pressed`/`released`) are stripped when the same
+tick is applied twice.
 
-- `first-wins`: buttons OR-ed; each axis takes the first non-zero contributor
-  (peer order = join order).
-- `average`: buttons OR-ed; axes averaged (two players pushing opposite ways
-  cancel out — good for cooperative steering).
-- `additive`: buttons OR-ed; axes summed and clamped to −1..1 (two players
-  pushing the same way move faster).
+**Shared control.** When `PlayerInput.coOwners` is non-empty (and
+`sharedControl` is on) the host gathers the owner's and each co-owner's latest
+snapshot and applies `mergeSnapshots(list, PlayerInput.mergeStrategy)`:
+`average` (axes averaged; opposite pushes cancel), `first-wins` (first
+non-zero contributor in owner→co-owner order), `additive` (summed, clamped).
+Buttons are OR-ed. `sync.shareControl(entity, peerId, enabled)` toggles
+membership and updates `NetworkIdentity.sharedWith` everywhere; `inputFor(e)`
+returns the merged snapshot.
 
-`pressed` edges are preserved for actions no peer was already holding; the
-merged snapshot is applied with `PlayerInput.apply()` so scripts see one
-consistent `onOwnerInput`. `sync.shareControl(entity, peerId, enabled)`
-toggles membership at runtime; `settings.multiUser.sharedControl` gates the
-feature for a project.
+**Snapshots.** At `tickRate` the host captures each `NetworkIdentity`
+(`replicate` true) into an `EntityState` of 12 ints (position /1000,
+smallest-three rotation as u8+3×i16, scale /1000, 2D velocity /100) plus the
+JSON of replicated components. States are kept in a `SnapshotHistory` ring;
+for each client the delta against the tick it last acknowledged is encoded
+(`snapshot.ts` layout: `u32 tick · u32 baseline · u32 count · {varint netId ·
+u8 flags · groups...}`) with only changed groups (thresholds from
+`NetTransform.positionThreshold/rotationThreshold`) and only changed
+component JSON; unchanged entities are skipped and an all-empty delta is not
+sent at all. A keyframe (baseline 0) is sent on join, when the ack is missing
+from the history, and every `keyframeInterval` snapshots. Values are absolute,
+so loss never corrupts state. Owner-authority entities are excluded from
+snapshots to their owner.
 
-## Lockstep mode
+**Replicated components.** `Transform` always; other components when
+`markReplicated('Type', ['field'?])` was called, `NetworkIdentity.syncComponents`
+lists the type, `ComponentMeta.replicate` is true, or a field has
+`FieldMeta.sync` (read structurally; no core changes). Received JSON is
+applied with `registry.applyProps`.
 
-All peers run `Engine.fixedSteps()` only when they have every peer's input for
-that tick (input delay of 2–3 ticks hides latency). Inputs are exchanged
-reliably; the simulation is deterministic because the physics world sorts
-bodies and pairs, uses no wall-clock time, and randomness goes through the
-seeded `engine.random`. Periodically hash `saveScene()` output to detect
-desync and fall back to a host keyframe.
+**Client side.** Snapshot groups update a per-entity "known" state; the
+`InterpolationSystem` (`update` phase, priority −500) buffers samples in a
+ring per entity, advances a render clock at `tickRate` trailing the newest
+sample by `interpolationDelay` ticks, lerps position / slerps rotation between
+surrounding samples, extrapolates with velocity for up to `extrapolation`
+seconds, and snaps when a sample jumps more than `teleportDistance`. Remote
+`RigidBody2D`/`RigidBody3D` are switched to `kinematic` (restored when
+authority returns) so local physics does not fight the interpolation.
+`NetTransform.targetPosition/targetRotation/targetVelocity/lastTick` mirror
+the newest sample.
 
-## Wire format guidelines
+**Spawn / despawn.** Host: `spawn(prefab, { ownerId, position, authority })`
+instantiates from `engine.prefabs`, assigns `netId`, sets `PlayerInput.owner`,
+broadcasts `spawn`. Clients call the same API and the host executes it
+(`spawnReq`, owner defaults to the requester; the call returns `NULL_ENTITY`
+on the client). `despawn` destroys everywhere (`despawned` event);
+`despawnOwnedBy(peerId)` and `spawnPlayers(prefab, opts)` cover the usual
+"one avatar per player" flow.
 
-- Control messages (join, spawn, despawn, owner, rpc) as small JSON objects
-  with a `t` type field, reliable.
-- Snapshots and inputs as binary (`ArrayBuffer`) via `DataView`, unreliable
-  when the transport supports it. Prefix every packet with a `u8` type and a
-  `u32` tick.
-- Keep the server a dumb relay/signalling service where possible so the
-  host's browser owns game state; the server tracks rooms, assigns peer ids,
-  elects the host and forwards messages.
+**Authority.** `authority: 'host'` (default): host simulates.
+`authority: 'owner'`: the owner simulates and streams `OWNER_STATE` (same
+encoding, full) to the host each tick; the host writes it into its kinematic
+copy and relays it in snapshots to everyone else.
 
-## Implementation checklist for the net worker
+**RPC.** `rpc(name, args, target, entity?)` with target `'host'` (default),
+`'all'` (includes caller, delivered locally at once), `'others'`, or a peer
+id. Clients send to the host which routes/forwards; delivery emits the `rpc`
+event, calls `onRpc(name)` handlers and, with an entity, `engine.scripting.rpc`
+→ the script's `onRpc(ctx, name, args, from)`.
 
-- [ ] `WebSocketTransport` (relay server in `server/index.js`, `npm run serve`)
-- [ ] optional `WebRTCTransport` with the WebSocket server for signalling
-- [ ] `HostAuthoritativeSync implements NetSync` (+ system installation)
-- [ ] `LockstepSync implements NetSync`
-- [ ] connect in `src/player/main.ts` where marked, using
-      `project.settings.network`
-- [ ] tests in `tests/net.test.ts` using two engines in one process with an
-      in-memory transport
+**Ownership.** `setOwner(entity, peerId)` (host, or the current owner via
+`ownerReq`) updates `NetworkIdentity.ownerId` and `PlayerInput.owner`,
+re-applies the simulation policy and emits `ownershipChanged` everywhere.
+
+**Host migration.** When the transport reports `host-changed`, the new host
+adopts the entity table (`nextNetId = max + 1`), re-enables physics for
+host-authority entities, takes over entities the old host owned, drops the
+old host from the roster (`playerLeft`) and broadcasts `takeover`; clients
+reset interpolation and re-`hello`, receiving a fresh `welcome` + keyframe.
+Everyone gets `hostChanged { hostId, previous, isHost }`.
+
+**Events**: `connected`, `disconnected`, `playerJoined`, `playerLeft`,
+`spawned`, `despawned`, `ownershipChanged`, `rpc`, `hostChanged`. Local
+`playerJoined` for the host itself is emitted one frame after `start()` so
+scripts registered in `onStart` receive it. `players()` returns
+`{ peerId, displayName, isHost, rtt }[]`.
+
+Options (`HostSyncOptions`): `tickRate` (20), `maxPlayers`, `sharedControl`,
+`mergeStrategy`, `autoInput` (true), `keyframeInterval` (60),
+`inputRedundancy` (3), `historySize` (64).
+
+## Lockstep (`LockstepSync`)
+
+All participants run identical fixed steps. Each step a peer publishes its
+`InputSnapshot` for tick `T + inputDelay` (`{ t:'in', tick, s, r? }` on
+`_lock`, reliable) and executes tick `T` only when every participant's input
+for `T` is present; otherwise all `fixedUpdate` systems are disabled for that
+step (`stalls` counts them). RPCs ride in `r` and are delivered by everyone at
+the same tick in participant-id order, so they are deterministic. The host
+locks the roster with `begin(seed)` (`go { peers, seed }` reseeds
+`engine.random` on all peers; the lobby's Start button calls it); joiners
+after that get `busy`. Every `hashInterval` ticks an FNV-1a hash of
+`saveScene().entities` is exchanged; a mismatch emits `desync`. `spawn` is
+local and deterministic (no messages), `setOwner`/`shareControl` are local too.
+
+## Player integration
+
+`src/player/main.ts` calls `installNetworking` when `?room=` is present and
+`settings.network.mode !== 'none'` (or when no project is given, so the smoke
+scenes can be played over `?room=` with host-authoritative defaults): it creates the transport from `?net=`
+(default `peer`), connects with `?name=`, creates the sync for the project's
+mode and shows `NetLobbyOverlay` (room code, "Copy invite link", roster with
+host badge + RTT, status/errors, "Play offline" fallback, Start button in
+lockstep). The lobby collapses to a pill a few seconds after the game starts.
+
+## Tests
+
+`tests/net.test.ts` runs everything over `MemoryNetwork` (with latency,
+jitter and loss): wire/snapshot encoding, rooms and host election, channel
+multiplexing and presence, handshake and roster, spawn/position replication,
+delta compression, replicated component fields, late join, input relay,
+shared-control merging (average / first-wins / additive), RPC targets and
+entity RPCs, ownership transfer, owner authority, host migration,
+`spawnPlayers`, lockstep determinism and URL parsing.

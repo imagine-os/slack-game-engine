@@ -37,7 +37,7 @@ Pages:
 | --- | --- |
 | `index.html` | Launcher: lists demos from `public/demos/index.json` and local projects. |
 | `editor.html` | Editor shell (`src/editor/`, filled by the editor worker). |
-| `play.html` | Runtime player: `?project=<id|url>&room=<id>&scene=<name>&renderer=2d|3d`. Without `project` it shows a smoke scene (`?renderer=3d` for WebGL). |
+| `play.html` | Runtime player: `?project=<id|url>&room=<id>&scene=<name>&renderer=2d|3d`. Without `project` it shows a smoke scene (`?renderer=3d` for WebGL; `?room=` still joins a multiplayer room). |
 
 ### Using the engine from code
 

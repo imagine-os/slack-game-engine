@@ -8,6 +8,7 @@ import '../styles/player.css';
 import { Engine } from '../core/Engine';
 import { ProjectLoader } from '../project/ProjectLoader';
 import { ProjectStore } from '../project/ProjectStore';
+import type { Project } from '../project/types';
 import { engineOptionsFor, runProject } from '../project/runProject';
 import { smokeScene2D, smokeScene3D, smokeScripts } from './smoke';
 
@@ -65,6 +66,22 @@ declare global {
   interface Window { forge?: Engine }
 }
 
+/**
+ * Multiplayer: transport from ?net= (peer | local | ws), room from ?room=, name from ?name=.
+ * installNetworking connects, installs the NetSync for the project's mode (host-authoritative
+ * defaults without a project) and shows the lobby with a "Play offline" fallback; see
+ * src/net/README.md and docs/MULTIPLAYER.md.
+ */
+async function joinRoom(engine: Engine, project?: Project): Promise<void> {
+  const { installNetworking, parseNetParams } = await import('../net');
+  await installNetworking(engine, {
+    params: parseNetParams(location.search),
+    project,
+    container: app,
+    onOffline: () => engine.hud.text('room', 'Playing offline', { anchor: 'top-left' }),
+  });
+}
+
 async function main(): Promise<void> {
   const projectRef = params.get('project');
   const room = params.get('room') ?? '';
@@ -82,12 +99,7 @@ async function main(): Promise<void> {
         onProgress: (f) => { progress.value = f; },
         scene: params.get('scene') ?? undefined,
       });
-      if (room && project.settings.network.mode !== 'none') {
-        // The networking worker installs a transport + NetSync here (see src/net/README.md).
-        // Until then we connect the NullTransport so scripts see a consistent room id.
-        await engine.net.transport.connect({ roomId: room });
-        engine.hud.text('room', `Room ${room} · ${engine.net.isHost ? 'host' : 'client'}`, { anchor: 'top-left' });
-      }
+      if (room && project.settings.network.mode !== 'none') await joinRoom(engine, project);
     } else {
       const is3d = rendererParam === '3d';
       document.title = is3d ? 'Forge Player – 3D smoke test' : 'Forge Player – 2D smoke test';
@@ -96,6 +108,8 @@ async function main(): Promise<void> {
       engine.scripting.load(smokeScripts);
       engine.loadScene(is3d ? smokeScene3D() : smokeScene2D());
       engine.hud.text('hint', is3d ? 'Drag to orbit · wheel to zoom · ?renderer=2d for the 2D scene' : 'WASD / arrows to move · Space to jump · ?renderer=3d for the 3D scene', { anchor: 'top', y: 10 });
+      // The smoke scenes honour ?room= too (host-authoritative defaults) so multiplayer can be tried without a project.
+      if (room) await joinRoom(engine);
     }
   } catch (err) {
     fail((err as Error).stack ?? String(err));

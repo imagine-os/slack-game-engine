@@ -9,14 +9,16 @@ export type NetPayload = ArrayBuffer | Uint8Array | object;
 
 export interface TransportEvents extends Record<string, unknown> {
   /** Connected to the room; `localId` is now valid. */
-  connected: { localId: PeerId; isHost: boolean; roomId: string; peers: PeerId[] };
+  connected: { localId: PeerId; isHost: boolean; roomId: string; peers: PeerId[]; hostId?: PeerId };
   disconnected: { reason: string };
   message: { from: PeerId; data: NetPayload; reliable: boolean };
-  'peer-join': { peerId: PeerId };
+  /** A peer joined the room. `displayName` is present when the transport carries names. */
+  'peer-join': { peerId: PeerId; displayName?: string };
   'peer-leave': { peerId: PeerId };
   /** Host migrated to a new peer. */
   'host-changed': { hostId: PeerId };
-  error: { error: unknown };
+  /** Transport-level problem (connection refused, ICE failure, ...). `fatal` means the transport gave up. */
+  error: { error: unknown; message?: string; fatal?: boolean };
 }
 
 export interface ConnectOptions {
@@ -54,6 +56,8 @@ export interface Transport {
   readonly localId: PeerId;
   /** Whether this peer is the authoritative host of the room. */
   readonly isHost: boolean;
+  /** Peer id of the current host (equals `localId` when `isHost`; empty when unknown). */
+  readonly hostId: PeerId;
   /** Current room id (empty when disconnected). */
   readonly roomId: string;
   /** Connected peers excluding self. */
