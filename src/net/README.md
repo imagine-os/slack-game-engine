@@ -221,7 +221,8 @@ local and deterministic (no messages), `setOwner`/`shareControl` are local too.
 ## Player integration
 
 `src/player/main.ts` calls `installNetworking` when `?room=` is present and
-`settings.network.mode !== 'none'`: it creates the transport from `?net=`
+`settings.network.mode !== 'none'` (or when no project is given, so the smoke
+scenes can be played over `?room=` with host-authoritative defaults): it creates the transport from `?net=`
 (default `peer`), connects with `?name=`, creates the sync for the project's
 mode and shows `NetLobbyOverlay` (room code, "Copy invite link", roster with
 host badge + RTT, status/errors, "Play offline" fallback, Start button in

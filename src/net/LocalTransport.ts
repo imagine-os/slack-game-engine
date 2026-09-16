@@ -94,6 +94,10 @@ export class LocalTransport implements Transport {
     this.timer = setInterval(() => this.tick(), this.opts.heartbeatMs);
     if (typeof window !== 'undefined') window.addEventListener('pagehide', this.onPageHide);
     this.events.emit('connected', { localId: this.localId, isHost: this.isHost, roomId: this.roomId, peers: this.peers.slice(), hostId: this.hostId });
+    // Like the ws/peer transports, announce the members that were already in the room (with their
+    // names) so listeners such as NetHub learn the host's display name; their hub hello may have
+    // been posted before we were connected and was dropped.
+    if (w) for (const m of w.members) if (m.id !== this.localId) this.events.emit('peer-join', { peerId: m.id, displayName: m.name });
   }
 
   private pendingWelcome: ((f: Frame & { k: 'welcome' }) => void) | null = null;
