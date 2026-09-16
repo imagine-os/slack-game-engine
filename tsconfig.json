@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/core/*"],
+      "@render/*": ["src/render/*"],
+      "@physics/*": ["src/physics/*"],
+      "@input/*": ["src/input/*"],
+      "@audio/*": ["src/audio/*"],
+      "@assets/*": ["src/assets/*"],
+      "@scripting/*": ["src/scripting/*"],
+      "@project/*": ["src/project/*"],
+      "@net/*": ["src/net/*"],
+      "@ui/*": ["src/ui/*"],
+      "forge-engine": ["src/index.ts"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": ["src", "tests", "vite.config.ts", "server/**/*.ts"]
+}
