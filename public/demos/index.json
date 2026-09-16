@@ -1,6 +1,54 @@
 {
   "demos": [
     {
+      "id": "arena-blasters",
+      "name": "Arena Blasters",
+      "title": "Arena Blasters",
+      "description": "Top-down arena shooter for 1-8 players: thrust, turn, blast asteroids and each other, first to 15 points wins.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 8
+      },
+      "tags": [
+        "shooter",
+        "physics",
+        "particles",
+        "audio"
+      ],
+      "controls": [
+        "A/D: turn",
+        "W: thrust",
+        "J / click: fire"
+      ],
+      "featured": true
+    },
+    {
+      "id": "sky-hoppers",
+      "name": "Sky Hoppers",
+      "title": "Sky Hoppers",
+      "description": "Co-op platformer for 1-4 players: run and jump through a tilemap level with coins, spikes, moving platforms and shared checkpoints.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "2d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 4
+      },
+      "tags": [
+        "platformer",
+        "co-op",
+        "tilemap"
+      ],
+      "controls": [
+        "A/D: move",
+        "Space: jump"
+      ],
+      "featured": true
+    },
+    {
       "id": "starter-2d",
       "name": "Starter 2D",
       "title": "Starter 2D",

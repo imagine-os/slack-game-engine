@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#78b6ff"/><stop offset="1" stop-color="#2b3560"/></linearGradient></defs>
+<rect width="320" height="180" fill="url(#bg)"/>
+
+<polygon points="0,150 60,90 120,140 190,70 260,130 320,100 320,180 0,180" fill="#3a4a7a"/>
+<rect x="0" y="140" width="320" height="40" fill="#4fbf5a"/><rect x="0" y="148" width="320" height="32" fill="#6b4a2e"/>
+<rect x="90" y="100" width="64" height="12" rx="3" fill="#8f99b3"/>
+<circle cx="200" cy="90" r="7" fill="#ffd166"/><circle cx="225" cy="80" r="7" fill="#ffd166"/><circle cx="250" cy="90" r="7" fill="#ffd166"/>
+<ellipse cx="60" cy="122" rx="14" ry="16" fill="#4cc2ff"/><ellipse cx="110" cy="84" rx="14" ry="16" fill="#ff7a3d"/>
+<rect x="290" y="80" width="3" height="60" fill="#d8dce8"/><polygon points="293,82 314,90 293,98" fill="#ef476f"/>
+<text x="160" y="36" fill="#fff" font-family="system-ui,sans-serif" font-size="18" text-anchor="middle" font-weight="700">Sky Hoppers</text>
+</svg>

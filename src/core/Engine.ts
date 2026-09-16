@@ -25,6 +25,8 @@ import { ScriptRuntime } from '../scripting/ScriptRuntime';
 import { ScriptFixedSystem, ScriptLateSystem, ScriptUpdateSystem } from '../scripting/ScriptSystems';
 import type { Diagnostic } from '../scripting/types';
 import { NetHub } from '../net/NetHub';
+// Side-effect import: registers NetworkIdentity/NetTransform so scenes and prefabs using them load in every bundle.
+import '../net/components';
 import { Overlay } from '../ui/Overlay';
 
 export type RendererChoice = '2d' | '3d' | 'none';

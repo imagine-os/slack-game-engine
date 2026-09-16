@@ -1,0 +1,129 @@
+// Co-op level flow: spawns a Hopper per player, counts coins, remembers the
+// shared checkpoint, handles respawns and the level-complete screen.
+function hud(ctx) { return ctx.engine.canvas ? ctx.engine.hud : null; }
+
+const COLORS = ['#4cc2ff', '#ff7a3d', '#8b7dff', '#06d6a0'];
+
+defineScript({
+  name: 'GameManager',
+  description: 'Spawns players, tracks coins/checkpoints, restarts the level.',
+  props: {
+    respawnDelay: { type: 'number', default: 1, min: 0, max: 10 },
+    restartDelay: { type: 'number', default: 5, min: 1, max: 30 },
+    spawnName: { type: 'string', default: 'Spawn Point' },
+  },
+  onStart(ctx) {
+    const s = ctx.state;
+    s.players = {};
+    s.count = 0;
+    s.unsub = [];
+    s.coins = 0;
+    s.startTime = ctx.time.elapsed;
+    s.complete = false;
+    const spawn = ctx.find(ctx.props.spawnName);
+    const st = spawn !== undefined ? ctx.getOn(spawn, 'Transform') : null;
+    s.spawn = st ? { x: st.x, y: st.y } : { x: 2, y: 3 };
+    s.checkpoint = { ...s.spawn };
+    // Remember every coin so the level can be rebuilt after completion.
+    s.coinSpots = ctx.findAll('coin').map((e) => { const t = ctx.getOn(e, 'Transform'); return { x: t.x, y: t.y }; });
+    s.totalCoins = s.coinSpots.length;
+
+    if (ctx.net.isHost) {
+      this.addPlayer(ctx, ctx.net.localId);
+      const sync = ctx.net.hub.sync;
+      if (sync) {
+        for (const p of sync.players()) if (p.peerId !== ctx.net.localId) this.addPlayer(ctx, p.peerId);
+        s.unsub.push(sync.on('playerJoined', ({ peerId }) => this.addPlayer(ctx, peerId)));
+        s.unsub.push(sync.on('playerLeft', ({ peerId }) => this.removePlayer(ctx, peerId)));
+      }
+    }
+    this.drawHud(ctx);
+  },
+  onDestroy(ctx) {
+    for (const off of ctx.state.unsub) off();
+    const h = hud(ctx);
+    if (h) { h.remove('coins'); h.remove('hint'); h.remove('complete'); }
+  },
+  onUpdate(ctx) {
+    if (ctx.time.frame % 20 === 0) this.drawHud(ctx);
+  },
+
+  addPlayer(ctx, peerId) {
+    const s = ctx.state;
+    if (s.players[peerId]) return;
+    const index = s.count++;
+    const pos = { x: s.checkpoint.x + (index % 4) * 0.6, y: s.checkpoint.y };
+    const entity = ctx.net.spawn('Hopper', { ownerId: peerId, position: pos });
+    const pi = ctx.getOn(entity, 'PlayerInput');
+    if (pi) pi.owner = peerId;
+    const ni = ctx.getOn(entity, 'NetworkIdentity');
+    if (ni) ni.ownerId = peerId;
+    const name = ctx.getOn(entity, 'Name');
+    if (name) name.name = `Hopper ${peerId}`;
+    const script = ctx.getOn(entity, 'Script');
+    script.props.color = COLORS[index % COLORS.length];
+    script.props.label = `P${index + 1}`;
+    script.props.respawnDelay = ctx.props.respawnDelay;
+    s.players[peerId] = { entity, index };
+  },
+  removePlayer(ctx, peerId) {
+    const p = ctx.state.players[peerId];
+    if (!p) return;
+    if (ctx.world.isAlive(p.entity)) {
+      const sync = ctx.net.hub.sync;
+      if (sync) sync.despawn(p.entity); else ctx.destroy(p.entity);
+    }
+    delete ctx.state.players[peerId];
+  },
+
+  onMessage(ctx, name, data) {
+    const s = ctx.state;
+    if (!ctx.net.isHost) return;
+    if (name === 'coinCollected') { s.coins++; this.drawHud(ctx); }
+    else if (name === 'checkpoint') {
+      if (data.x > s.checkpoint.x) { s.checkpoint = { x: data.x, y: data.y }; ctx.audio.play('checkpoint', { volume: 0.6 }); ctx.sendTo(data.entity, 'activate'); }
+    }
+    else if (name === 'respawnRequest') {
+      const t = ctx.getOn(data.entity, 'Transform');
+      if (t) t.setPosition(s.checkpoint.x, s.checkpoint.y + 0.5);
+      ctx.sendTo(data.entity, 'respawned');
+    }
+    else if (name === 'goal' && !s.complete) this.complete(ctx);
+  },
+  complete(ctx) {
+    const s = ctx.state;
+    s.complete = true;
+    const secs = (ctx.time.elapsed - s.startTime).toFixed(1);
+    const h = hud(ctx);
+    if (h) h.panel('complete', 'Level complete!', `Coins ${s.coins} / ${s.totalCoins} · ${secs}s\nRestarting in ${ctx.props.restartDelay}s`);
+    ctx.audio.play('goal', { volume: 0.8 });
+    ctx.send('levelComplete', {});
+    ctx.timer(ctx.props.restartDelay, () => this.restart(ctx));
+  },
+  restart(ctx) {
+    const s = ctx.state;
+    for (const c of ctx.findAll('coin')) ctx.destroy(c);
+    for (const spot of s.coinSpots) ctx.net.spawn('Coin', { position: spot });
+    for (const c of ctx.findAll('checkpoint')) ctx.sendTo(c, 'reset');
+    s.coins = 0;
+    s.checkpoint = { ...s.spawn };
+    s.startTime = ctx.time.elapsed;
+    s.complete = false;
+    for (const p of Object.values(s.players)) {
+      const t = ctx.getOn(p.entity, 'Transform');
+      if (t) t.setPosition(s.spawn.x + (p.index % 4) * 0.6, s.spawn.y);
+      ctx.sendTo(p.entity, 'respawned');
+    }
+    const h = hud(ctx);
+    if (h) h.remove('complete');
+    this.drawHud(ctx);
+  },
+  drawHud(ctx) {
+    const h = hud(ctx);
+    if (!h) return;
+    const s = ctx.state;
+    const secs = Math.floor(ctx.time.elapsed - s.startTime);
+    h.text('coins', `Coins ${s.coins} / ${s.totalCoins}   ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, { anchor: 'top-left' });
+    h.text('hint', 'Reach the flag together · A/D move · Space jump', { anchor: 'top' });
+  },
+});
