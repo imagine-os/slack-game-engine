@@ -17,7 +17,7 @@ export function engineOptionsFor(project: Project, extra: EngineOptions = {}): E
     renderer: s.renderer,
     fixedRate: s.fixedRate,
     pixelsPerUnit: s.pixelsPerUnit,
-    render: { pixelPerfect: s.pixelPerfect, ...extra.render },
+    render: { pixelPerfect: s.pixelPerfect, ...s.render, ...extra.render },
     gravity: s.physics.gravity,
     touchOverlay: s.touchControls ? { joystick: true, buttons: s.touchButtons.map((name) => ({ name })) } : false,
     defaultBindings: false,

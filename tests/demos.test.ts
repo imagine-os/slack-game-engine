@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  Engine, EventEmitter, HostAuthoritativeSync, MemoryNetwork, NetworkIdentity, PlayerInput, Script, instantiatePrefab, normalizeProject, runProject,
+  Engine, EventEmitter, HostAuthoritativeSync, MemoryNetwork, NetworkIdentity, PlayerInput, Script, instantiatePrefab, normalizeProject, procgenPlugin, runProject,
   type Diagnostic, type Entity, type InputSnapshot, type NetSync, type NetSyncEvents, type NetSyncOptions, type Project,
 } from '../src/index';
 import { DEMOS_DIR, generateAll, stalePaths } from '../scripts/build-demos';
@@ -17,6 +17,7 @@ const ids = readdirSync(DEMOS_DIR).filter((d) => existsSync(join(DEMOS_DIR, d, '
 
 /** Entities (by name or `tag:` prefix) that must exist after the warm-up. */
 const KEY_ENTITIES: Record<string, string[]> = {
+  driftwind: ['Camera', 'GameManager', 'World', 'Glider local', 'tag:island', 'tag:ring', 'tag:mote'],
   'arena-blasters': ['Camera', 'GameManager', 'Ship local', 'tag:asteroid'],
   'sky-hoppers': ['Camera', 'Camera Target', 'Level', 'Hopper local', 'Goal Flag', 'tag:coin', 'tag:checkpoint'],
   'paddle-rush': ['Camera', 'GameManager', 'Paddle Left', 'Paddle Right', 'Puck', 'Goal Left', 'Goal Right'],
@@ -32,6 +33,7 @@ function loadProject(id: string): Project {
 
 function headlessEngine(): { engine: Engine; errors: Diagnostic[] } {
   const engine = Engine.create(null, { renderer: 'none', audio: false, seed: 1 });
+  engine.use(procgenPlugin); // the player installs it too; Driftwind generates its world through it
   // No DOM/network in tests: assets resolve to placeholders.
   engine.assets.registerLoader('image', async () => ({ width: 1, height: 1 }));
   engine.assets.registerLoader('audio', async () => ({}));
