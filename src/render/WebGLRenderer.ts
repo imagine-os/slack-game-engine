@@ -402,9 +402,9 @@ export class WebGLRenderer implements Renderer, QualityTarget {
     const { cam, t } = this.findCamera(world);
     this.setupCamera(world, cam, t);
     this.collectSettings(world);
-    this.collectLights(world, cam);
     const postActive = this.post.enabled || this.effectiveRenderScale() < 1;
     this.linear = postActive && this.postProcess.isLinear(this.post);
+    this.collectLights(world, cam);
     this.prepareShadows(cam);
     this.collectBatches(world);
 
@@ -685,6 +685,7 @@ export class WebGLRenderer implements Renderer, QualityTarget {
       s.setVec3('uSunDir', st.sunDir.x, st.sunDir.y, st.sunDir.z);
       this.setColor(s, 'uZenith', st.zenith);
       this.setColor(s, 'uHorizon', st.horizon);
+      this.setColor(s, 'uMid', st.mid);
       this.setColor(s, 'uGround', st.ground);
       this.setColor(s, 'uSunColor', st.sunColor);
       s.setVec4('uSunParams', Math.cos((set.sunSize * Math.PI) / 360), set.sunGlow, set.turbidity, st.night);

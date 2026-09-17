@@ -90,6 +90,7 @@ vec3 applyFog(vec3 color, vec3 wp) {
  */
 const SHADOW_GLSL = /* glsl */ `
 uniform bool uShadows;
+precision highp sampler2DShadow;
 uniform sampler2DShadow uShadowMap;
 uniform mat4 uShadowMatrix;
 uniform vec4 uShadowParams;
@@ -311,6 +312,7 @@ uniform mat4 uInvViewProj;
 uniform vec3 uSunDir;
 uniform vec3 uZenith;
 uniform vec3 uHorizon;
+uniform vec3 uMid;
 uniform vec3 uGround;
 uniform vec3 uSunColor;
 uniform vec4 uSunParams;   // cos(disc half-angle), glow, turbidity, night
@@ -350,9 +352,10 @@ void main() {
   float h = d.y;
   float turb = uSunParams.z;
   float night = uSunParams.w;
-  // Gradient: haze keeps the horizon colour higher up the dome.
-  float zen = pow(clamp(h, 0.0, 1.0), mix(0.6, 0.35, turb));
-  vec3 sky = mix(uHorizon, uZenith, zen);
+  // Three-stop gradient; haze keeps the horizon band taller.
+  float t1 = smoothstep(0.0, 0.06 + turb * 0.12, h);
+  float t2 = smoothstep(0.03, 0.38 + turb * 0.2, h);
+  vec3 sky = mix(mix(uHorizon, uMid, t1), uZenith, t2);
   vec3 col = h < 0.0 ? mix(uHorizon, uGround, smoothstep(0.0, 0.3, -h)) : sky;
   // Sun.
   float cosA = dot(d, uSunDir);
@@ -372,9 +375,9 @@ void main() {
     vec3 f = fract(p) - 0.5;
     float rnd = hash31(cell);
     vec3 off = vec3(hash31(cell + 1.7), hash31(cell + 3.1), hash31(cell + 5.3)) - 0.5;
-    float star = smoothstep(0.12, 0.0, length(f - off * 0.6)) * step(0.965, rnd);
+    float star = smoothstep(0.16, 0.0, length(f - off * 0.6)) * step(0.955, rnd);
     float twinkle = 0.7 + 0.3 * sin(uCloudParams.y * 3.0 + rnd * 40.0);
-    col += vec3(star) * twinkle * night * uCloudParams.w * smoothstep(0.0, 0.2, h) * (0.6 + 0.6 * rnd);
+    col += vec3(0.9, 0.95, 1.0) * star * twinkle * night * uCloudParams.w * smoothstep(0.0, 0.2, h) * (1.2 + 1.5 * rnd);
   }
   // Cloud band projected on a dome.
   float coverage = uCloudParams.x;
@@ -490,7 +493,7 @@ void main() {
   // Sun glint: a tight and a broad lobe.
   vec3 H = normalize(L + V);
   float NdotH = max(dot(N, H), 0.0);
-  float spec = pow(NdotH, 220.0) * 1.6 + pow(NdotH, 24.0) * 0.12;
+  float spec = pow(NdotH, 260.0) * 1.4 + pow(NdotH, 32.0) * 0.06;
   color += uDirLightColor * spec * uWaterParams.y * sh;
   // Fresnel rim toward the horizon colour.
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
@@ -501,13 +504,13 @@ void main() {
   float ripple2 = sin(vWorldPos.x * 1.3 + vWorldPos.z * 1.7 + time * 1.1) * 0.5 + 0.5;
   float crest = smoothstep(uFoam.z, min(uFoam.z + 0.18, 1.0), h01) * (0.55 + 0.45 * ripple2);
   float shore = clamp(vColor.r, 0.0, 1.0);
-  float shoreFoam = smoothstep(0.35, 0.95, shore + 0.35 * shore * sin(shore * 9.0 - time * 2.2)) * (0.6 + 0.4 * ripple);
-  float band = 1.0 - smoothstep(0.0, max(uFoam.y, 1e-3), abs(vBaseY - uFoam.x));
+  float shoreFoam = smoothstep(0.62, 1.0, shore + 0.3 * shore * sin(shore * 9.0 - time * 2.2)) * (0.6 + 0.4 * ripple);
+  float band = uFoam.y > 0.0 ? 1.0 - smoothstep(0.0, uFoam.y, abs(vBaseY - uFoam.x)) : 0.0;
   float bandFoam = band * smoothstep(0.35, 0.8, ripple * 0.7 + ripple2 * 0.3 + band * 0.3);
   float foam = clamp(crest + shoreFoam + bandFoam, 0.0, 1.0);
   color = mix(color, uFoamColor * (ambient + uDirLightColor * sh), foam * 0.9);
   color = applyFog(color, vWorldPos);
-  float alpha = clamp(uWaterParams.z + fres * (1.0 - uWaterParams.z) * 0.7 + foam * 0.5, 0.0, 1.0);
+  float alpha = clamp(uWaterParams.z + fres * (1.0 - uWaterParams.z) * 0.5 + foam * 0.4, 0.0, 1.0);
   fragColor = vec4(color, alpha);
 }
 `;

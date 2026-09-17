@@ -624,9 +624,11 @@ registerComponent(PostProcessSettings, {
  * Stylised water surface. Attach next to a `MeshRenderer` (typically a
  * subdivided plane); the renderer then draws that mesh with the water shader:
  * world-space sum-of-sines waves, two-tone colour by wave height, fresnel rim,
- * sun glint and animated foam. Foam appears on wave crests, where the mesh's
- * vertex colour red channel marks shore proximity, and where the undisplaced
- * surface height is within `foamWidth` of `shorelineHeight`.
+ * sun glint and animated foam. Foam appears on wave crests and where the
+ * mesh's vertex colour red channel marks shore proximity (bake 1 near the
+ * shore, 0 in deep water). For shaped (non-flat) water meshes such as rivers,
+ * set `foamWidth` > 0 to also foam where the rest height of the surface is
+ * within `foamWidth` of `shorelineHeight`.
  */
 export class WaterMaterial extends Component {
   static override readonly type = 'WaterMaterial';
@@ -642,13 +644,14 @@ export class WaterMaterial extends Component {
   waveSteepness = 0.25;
   /** Direction of the primary wave in the XZ plane, degrees. */
   waveDirection = 20;
-  /** Terrain height at which foam bands appear (see class docs). */
+  /** Rest height around which shaped water meshes get a foam band (see class docs). */
   shorelineHeight = 0;
-  foamWidth = 0.6;
+  /** Half-width of that band in world units; 0 disables it (default). */
+  foamWidth = 0;
   /** Crest foam threshold (0..1 of amplitude; 1 = none). */
   crestFoam = 0.75;
   /** Reflection-like rim toward the horizon colour. */
-  fresnel = 0.6;
+  fresnel = 0.45;
   specular = 0.8;
   opacity = 0.85;
   flatShading = true;
