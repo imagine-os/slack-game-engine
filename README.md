@@ -171,7 +171,7 @@ src/editor      editor shell (editor worker)
 src/styles      shared CSS
 public/demos    generated demo projects (sources in demos/src, generator in scripts/build-demos.ts)
 server/         WebSocket relay server for `?net=ws`
-docs/           ARCHITECTURE.md, API.md, CONTRIBUTING-WORKERS.md
+docs/           ARCHITECTURE.md, API.md, RENDERING.md (renderer pipeline), CONTRIBUTING-WORKERS.md
 tests/          vitest unit tests
 ```
 
