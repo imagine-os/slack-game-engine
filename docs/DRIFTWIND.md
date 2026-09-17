@@ -37,8 +37,8 @@ Play: `play.html?project=driftwind` (`?seed=amber-lagoon-42`, `?daily=1`,
 
 | Script | Role |
 | --- | --- |
-| `WorldStreamer` | Owns the `WorldGenerator`, streams chunks around the player (`ChunkTracker`), spawns islands with manual hi/LOD swap, decorations (instanced shared meshes, `lods` hide small props far away), motes, flocks, wind streaks, the sea, and animates bobbing lanterns, spinning turbine blades, drifting clouds. Sets `renderer.wind` from the first current. |
-| `Glider` | Flight model (in `onOwnerInput`, so only the simulating peer integrates): bank-to-turn, pitch authority, stall, gravity along the path, cruise settling, boost, brake, wind drift, sink, soft ceiling/floor, soft collision, gate detection, motes and discovery, HUD, ghost recording. Uses `engine.procgen.flight` helpers. |
+| `WorldStreamer` | Owns the `WorldGenerator`, streams chunks around the player (`ChunkTracker`), spawns islands with manual hi/LOD swap, decorations (instanced shared meshes, `lods` hide small props far away), motes, flocks, wind streaks, lantern trails at the gates, the sea with its fake island reflections (`sea-shade` discs), long waterfall ribbons down to splash discs, and animates bobbing lanterns, spinning turbine blades, drifting clouds. Sets `renderer.wind` from the first current. Frees the previous seed's meshes (`procgen.unregisterPrefix`) a second after a seed change. |
+| `Glider` | Flight model (in `onOwnerInput`, so only the simulating peer integrates): bank-to-turn, pitch authority, stall, gravity along the path, cruise settling, boost, brake, wind drift, sink, soft ceiling and an updraft floor just above the sea, soft collision, gate detection, motes and discovery, HUD, ghost recording, wingtip contrails (a pool of unlit puffs, one instanced draw). Uses `engine.procgen.flight` helpers. |
 | `ChaseCamera` | Chase camera with speed FOV, look-ahead, `renderer.setCameraShake` on collisions, speed streaks in wind, photo mode orbit, cinematic drift before take-off. |
 | `Sky` | Keeps `SkySettings.timeOfDay` drifting slowly around 17.5 (golden hour forever), pins a bloom-on quality ladder, positions the height fog above the sea; legacy path drives gradient sky/fog/lights when `SkySettings` is absent. |
 | `GameManager` | Host-authoritative spawner (one `Glider` per peer at `W.spawn(i)`), start-screen messages (`shell:fly`, `shell:race`, `shell:seed`), race state machine (countdown → running → finished), standings, best time + ghost in `localStorage`, `hud` RPC to guests, `fly`/`requestRace` RPCs from guests, host migration via `onHostChanged`. |
@@ -62,11 +62,30 @@ Messages between scripts are plain `ctx.send` events (`worldSeed`, `takeControl`
    colours, `flatShading`) plus one child per **special** group (emissive
    crystal glow and lanterns, translucent waterfalls and streaks, wind-swayed
    canopies with `windStrength`, island ponds with a `WaterMaterial`).
-4. The scene's `SkySettings` (procedural sky, `timeOfDay` 17.5, height fog),
-   `PostProcessSettings` (ACES, mild bloom, vignette, FXAA, MSAA 4) and the
-   shadow-casting sun (`shadowDistance` 110) do the lighting; the sea is a
-   7000-unit `WaterMaterial` plane 320 units below the lowest island that
-   follows the player.
+4. The scene's `SkySettings` (procedural sky, `timeOfDay` 17.65 drifting so the
+   sun sinks and the first stars fade in, cool zenith, layered cloud band, sun
+   pillar and corona, height fog), `PostProcessSettings` (ACES, bloom, vignette,
+   FXAA, MSAA 4) and the shadow-casting sun (`shadowDistance` 110) do the
+   lighting. The sea is a 7000-unit `WaterMaterial` plane at
+   `W.bounds.seaLevel` (130 units below the lowest island underside, ~200 below
+   the flight band) that follows the player: deep saturated blue-teal, per-pixel
+   analytic wave normals, a long sun-glint band, noise-gated crest foam and
+   drifting foam specks, and `fogStrength` 0.55 / a cool `fogTint` so the warm
+   haze never washes it out. Under every island a dark `sea-shade` disc fakes a
+   reflection; larger islands drop a translucent waterfall ribbon into a splash
+   disc.
+
+### World layout
+
+`WorldGenerator` lays 40 islands along a spiral (spacing 74, islands 22–28 units
+off the path so you fly past them at wing distance). Every 13th island is a
+**landmark**: a 40–50 unit giant whose rim the path grazes, with a summit stone
+ring, columns, stone lanterns, two waterfalls, a guaranteed flock and a 3.2×
+arch on the rim aligned with the path so you can fly straight through it. A
+small **crown** island floats ~50 units above each landmark, offset toward the
+path, so you can thread between the two. Gates carry an 8-lantern approach
+trail; clouds come in three tiers (a thick layer between islands and sea, a
+flight-level tier 60–125 units beside the path, a thin one above).
 
 All mesh names are prefixed with the world seed (`amber-lagoon-42:island-3`,
 `amber-lagoon-42:tree-meadow-pine-0/base`, `amber-lagoon-42:glider-2/hull`) so a
@@ -76,21 +95,24 @@ seed change never collides with cached registrations.
 
 | Where | Knob | Effect |
 | --- | --- | --- |
-| `WorldStreamer` props | `streamRadius` (520), `lodDistance` (260), `islands` (34), `detail` | streaming distance, hi/LOD swap, world size, decorations on/off |
-| `WorldGenerator` options | `spacing` (92), `chunkSize` (160), `gates` (12), `clouds` (70) | island density, chunk granularity, course length, cloud count |
+| `WorldStreamer` props | `streamRadius` (520), `lodDistance` (260), `islands` (40), `detail` | streaming distance, hi/LOD swap, world size, decorations on/off |
+| `WorldGenerator` options | `spacing` (74), `chunkSize` (160), `gates` (12), `clouds` (120), `landmarkEvery` (13), `seaDepth` (130) | island density, chunk granularity, course length, cloud count, landmark cadence, sea height |
+| Sea `WaterMaterial` (in `WorldStreamer.spawnSea`) | `deepColor`, `shallowColor`, `crestFoam` (0.84), `fresnel` (0.55), `specular` (1.35), `fogStrength` (0.55), `fogTint` | the colour and mood of the ocean |
 | `Glider` props | `cruise`, `stall`, `maxSpeed`, `turnRate`, `maxBank`, `pitchRate`, `boostAccel`, `sink` | the whole feel of flight |
 | `ChaseCamera` props | `distance`, `height`, `lookAhead`, `smoothing`, `fov`, `fovPerSpeed` | framing and speed sensation |
-| `Sky` props / `SkySettings` | `hour` (17.5), `driftHours` (0.55), `driftPeriod` (540 s); `fogDensity`, `fogHeight`, `fogSunBlend`, `clouds`, `turbidity` | time of day drift, atmosphere |
-| `PostProcessSettings` | `bloomIntensity` (0.38), `vignette` (0.3), `saturation` (1.1), `exposure` | the filmic look |
+| `Sky` props / `SkySettings` | `hour` (17.65), `driftHours` (0.5), `driftPeriod` (540 s); `fogDensity`, `fogHeight`, `fogSunBlend`, `clouds`, `turbidity`, `sunGlow` | time of day drift, atmosphere |
+| `PostProcessSettings` | `bloomIntensity` (0.45), `bloomThreshold` (0.95), `vignette` (0.32), `saturation` (1.15), `exposure` (0.98) | the filmic look |
 | `Sun` `Light` | `shadowDistance` (110), `shadowSoftness`, `shadowBias` | shadow reach vs. sharpness |
-| Project `settings.render` | `autoQuality: true`, `shadows`, `shadowMapSize` | the renderer quality ladder (`Sky` pins a bloom-on ladder) |
+| Project `settings.render` | `autoQuality: true`, `shadows`, `shadowMapSize` | the renderer's default quality ladder (render scale, shadow map size, MSAA, bloom, FXAA) |
 | `palettes.ts` | biome colours, `LIVERIES` | the entire colour story |
 
 ## Performance
 
-Default world in view: ~200 draw calls, ~900 instances, ~50k triangles, ~85
-shadow draws, 10 post-process passes (measured with `renderer.stats` in the
-Playwright run). Decorations share meshes and identical materials so they
+Default world in view: ~250–270 draw calls, ~1400 instances, ~110k triangles
+approaching a landmark (~200 draws / 80k triangles elsewhere, ~90 shadow
+draws, 10 post-process passes; measured with `renderer.stats` in the Playwright
+run). The sea plane, its discs, the waterfall ribbons, the lantern trails and
+the contrail puffs each add a single instanced draw. Decorations share meshes and identical materials so they
 instance; small props hide beyond 320 units and trees beyond 460 via
 `MeshRenderer.lods`; islands swap to a low-poly variant beyond `lodDistance`;
 chunks unload beyond `streamRadius`. `autoQuality` steps render scale, MSAA and
@@ -126,17 +148,26 @@ worker report).
 
 Driftwind uses every feature of the upgraded renderer (vertex colours,
 `flatShading`, `windStrength`, `emissiveStrength`, shadows, `SkySettings`,
-`PostProcessSettings`, `WaterMaterial`, `renderer.wind`, `setCameraShake`,
-`lods`, `autoQuality`). Two renderer issues are worked around in `Sky.js`:
-disabling bloom after it has run leaves the composite's bloom sampler on the
-shadow-map texture unit (GL_INVALID_OPERATION, black frame), and a shadow-map
-resize logs the same warning for one frame, so the quality ladder keeps bloom
-on and the shadow map at 2048 at every level. Meshes registered with
-`renderer.addMesh` cannot be removed, so a long session that cycles many seeds
-keeps old registrations alive.
+`PostProcessSettings`, `WaterMaterial` with `fogStrength`/`fogTint`,
+`renderer.wind`, `setCameraShake`, `lods`, `autoQuality`,
+`renderer.removeMesh`). The issues an earlier version worked around are fixed
+in the engine: the composite binds a black texture to its bloom sampler when
+bloom is off (no black frame when the quality ladder disables bloom), the
+shadow map is recreated rather than resized in place (no warning when the
+ladder changes its size), meshes can be unregistered (`procgen.unregister` /
+`unregisterPrefix`, used after a seed change) and a non-recursive
+`Transform.updateWorldMatrix()` no longer stops `world.updateTransforms()`
+from reaching the entity's children, so scripts read a moving parent's world
+matrix mid-frame with a plain `updateWorldMatrix()`.
 
-Engine footgun worth knowing: `Transform.updateWorldMatrix()` (non-recursive)
-clears the dirty flag, so a later `world.updateTransforms()` skips that
-entity's children and their meshes freeze in place. Scripts that read a moving
-parent's world matrix mid-frame must call `updateWorldMatrix(true)`; the
-Driftwind scripts do.
+## Screenshots and video
+
+`hero.png` next to the demo source (`demos/src/driftwind/hero.png`) is a
+1600×900 capture of the running game (start screen and HUD hidden); the demo
+build copies it to `public/demos/driftwind/hero.png` and lists it as
+`heroImage` in `index.json`, which the launcher's hero banner prefers over the
+SVG thumbnail (cards keep the SVG). The Playwright harnesses that produced the
+report screenshots step the engine manually (`engine.stop()` then
+`engine.step(1/60)` with `renderer.autoTime = false`) so SwiftShader frames are
+deterministic; the flight video is a 30 fps screenshot sequence assembled with
+ffmpeg.

@@ -50,6 +50,16 @@ Per frame (`WebGLRenderer.render`):
 `renderer.stats` reports `drawCalls`, `batches`, `instances`, `triangles`,
 `culled`, `shadowDrawCalls` and `postDrawCalls`.
 
+Robustness details worth knowing: the composite always binds a texture to its
+bloom sampler (a 1×1 black one when bloom is off), because the unit otherwise
+still holds the shadow map, a depth-compare texture that a plain `sampler2D`
+may not read (GL_INVALID_OPERATION and a black frame); the shadow map is
+recreated, not resized in place, when its size changes, and is unbound from
+its sampler unit while it is the render target; `renderer.removeMesh(name)` /
+`removeMeshes(prefix)` free a registered mesh and drop the batches that used
+it (a `MeshRenderer` still pointing at the name falls back to the cube with a
+warning).
+
 ## Meshes: vertex colours, bounds, flat shading
 
 `MeshData` accepts `colors?: Float32Array` (RGB per vertex) and
@@ -109,8 +119,9 @@ Add a `SkySettings` component to any entity:
   night a faint bluish moon light (`moonIntensity`) takes over. Hemisphere
   ambient (`ambientIntensity`) and fog colour follow too. Explicit ambient
   `Light`s are added on top.
-- Sky look: `sunSize`, `sunGlow`, `stars`, `clouds`, `cloudSpeed`,
-  `cloudHeight`, `turbidity` (haze), `exposure`, `tint`.
+- Sky look: `sunSize`, `sunGlow` (also scales a soft vertical light pillar and
+  corona through a low sun), `stars`, `clouds`, `cloudSpeed`, `cloudHeight`,
+  `turbidity` (haze), `exposure`, `tint`.
 - Fog: exponential distance fog (`fogDensity`, `fogStart`) combined with a
   height falloff (`fogHeightFalloff` above `fogHeight`), coloured from the
   horizon and blended toward the sun colour when looking at the sun
@@ -133,13 +144,27 @@ WaterMaterial: { deepColor, shallowColor, foamColor, waveAmplitude: 0.15, waveLe
 ```
 
 Waves are four world-space sines (with slight choppiness) displaced in the
-vertex shader, so instances tile seamlessly. Colour is two-tone by wave
-height, with a fresnel rim toward the horizon colour, a sun glint, shadows
-and fog. Foam appears on crests (`crestFoam`), where the mesh's vertex colour
-red channel is high (bake 1 near shores, 0 in deep water — the showcase does
-this from the terrain height field), and optionally where a shaped water
-mesh's rest height is within `foamWidth` of `shorelineHeight`.
-`flatShading` toggles faceted vs. smooth wave normals.
+vertex shader, so instances tile seamlessly. With `flatShading` off the
+fragment shader re-evaluates the same wave function per pixel for the normal
+and height, so a coarsely tessellated ocean plane (100-unit quads) still shows
+every wave; far away the normal settles toward flat so the surface does not
+shimmer. Colour is two-tone by wave height, lit by the hemisphere ambient plus
+a half-desaturated sun (water scatters skylight, so a teal sea stays teal under
+an orange sunset), with a fresnel rim toward the horizon colour, a tight and a
+broad sun glint plus a long glitter band at grazing angles, shadows and fog.
+
+Foam appears on crests above `crestFoam` (a threshold on the normalised wave
+height: 0 = trough, 1 = the tallest crest when every octave peaks together, so
+0.9+ gives rare white caps, 0.6 a choppy sea and 1 disables it; the crest term
+is gated by noise so the sine lattice does not show), as small drifting
+specks on the upper half of the swell, where the mesh's vertex colour red
+channel is high (bake 1 near shores, 0 in deep water — the showcase does this
+from the terrain height field), and optionally where a shaped water mesh's
+rest height is within `foamWidth` of `shorelineHeight`.
+
+`fogStrength` (0–1, default 1) scales how much of the scene fog the water
+takes, and `fogTint` multiplies the fog and horizon colour for the water only,
+so a warm sunset haze can stay cool and saturated over a distant sea.
 
 ## Wind
 
