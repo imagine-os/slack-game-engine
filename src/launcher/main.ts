@@ -22,6 +22,8 @@ interface DemoEntry {
   /** Short control hints shown on the card. */
   controls?: string[];
   featured?: boolean;
+  /** Shown as the big banner above the demo grid (the first flagged demo wins). */
+  hero?: boolean;
   /** Starter template (what "New project" copies). */
   template?: boolean;
 }
@@ -146,6 +148,42 @@ function demoCard(d: DemoEntry): HTMLElement {
   });
 }
 
+/** Flagship banner for a demo flagged `hero`: big thumbnail, blurb and the same actions as its card. */
+function heroBanner(d: DemoEntry): HTMLElement {
+  const title = demoTitle(d);
+  const banner = el('section', 'showcase');
+  banner.setAttribute('aria-label', `${title} showcase`);
+  if (d.thumbnail) banner.style.backgroundImage = `url("./demos/${d.id}/${d.thumbnail}")`;
+  const body = el('div', 'showcase-body');
+  body.appendChild(el('span', 'showcase-kicker', 'Featured demo'));
+  body.appendChild(el('h2', undefined, title));
+  body.appendChild(el('p', undefined, d.description));
+  const meta = el('div', 'meta');
+  const players = playersText(d.players);
+  if (d.renderer === '3d') meta.appendChild(el('span', 'badge threed', '3D'));
+  if (d.multiplayer) meta.appendChild(el('span', 'badge net', players ? `Multiplayer ${players}` : 'Multiplayer'));
+  for (const t of (d.tags ?? []).slice(0, 4)) meta.appendChild(el('span', 'badge', t));
+  body.appendChild(meta);
+  const actions = el('div', 'actions');
+  const play = el('button', 'primary', 'Play now');
+  play.setAttribute('aria-label', `Play ${title}`);
+  play.addEventListener('click', () => { location.href = playUrl(d.id); });
+  actions.appendChild(play);
+  if (d.multiplayer) {
+    const mp = el('button', undefined, 'Play with friends');
+    mp.setAttribute('aria-label', `Play ${title} in a new multiplayer room`);
+    mp.addEventListener('click', () => { location.href = playUrl(d.id, { room: roomId() }); });
+    actions.appendChild(mp);
+  }
+  const edit = el('button', undefined, 'Open in Editor');
+  edit.addEventListener('click', () => { location.href = editorUrl(d.id); });
+  actions.appendChild(edit);
+  body.appendChild(actions);
+  if (d.controls?.length) body.appendChild(el('p', 'showcase-controls', d.controls.join('  ·  ')));
+  banner.appendChild(body);
+  return banner;
+}
+
 function projectCard(p: ProjectSummary, store: ProjectStore, refresh: () => void): HTMLElement {
   return card({
     title: p.name,
@@ -200,6 +238,9 @@ async function render(): Promise<void> {
   app.appendChild(hero);
   app.appendChild(multiplayerHelp());
 
+  const showcaseSlot = el('div');
+  app.appendChild(showcaseSlot);
+
   const demosTitle = el('div', 'section-title');
   demosTitle.id = 'demos';
   demosTitle.appendChild(el('h2', undefined, 'Demos'));
@@ -242,6 +283,8 @@ async function render(): Promise<void> {
   const [demos, projects] = await Promise.all([loadDemos(), store.list().catch(() => [] as ProjectSummary[])]);
   const games = demos.filter((d) => !d.template);
   const templates = demos.filter((d) => d.template);
+  const flagship = games.find((d) => d.hero);
+  if (flagship) showcaseSlot.appendChild(heroBanner(flagship));
   demoCount.textContent = games.length ? `${games.length} available` : '';
   if (games.length === 0) {
     demoGrid.appendChild(el('div', 'empty', 'No demos yet. Demo projects live in public/demos/ and are listed in public/demos/index.json.'));
