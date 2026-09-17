@@ -32,7 +32,7 @@ Each module under `src/` has an `index.ts` and is re-exported by
 | `core/ecs` | `World`, `Component`, `Registry`, `Query`, `System`, `Transform`, `Name`/`Tag`, scene/prefab serialization. |
 | `core/Clock` | Fixed-step accumulator and frame timing. |
 | `core/Engine` | Composition root and frame loop. |
-| `render` | `Renderer` interface, render components, `Canvas2DRenderer`, `WebGLRenderer`, 2D systems (camera follow, animation, particles). |
+| `render` | `Renderer` interface, render components, `Canvas2DRenderer`, `WebGLRenderer` (shadows, sky, water, post-processing; see `docs/RENDERING.md`), 2D systems (camera follow, animation, particles). |
 | `physics` | `Physics2DWorld` + system, `Physics3DWorld` + system, controllers. |
 | `input` | Devices, `Input` action mapping, `InputSnapshot`, `PlayerInput`. |
 | `audio` | `AudioEngine`, components, `AudioSystem`. |

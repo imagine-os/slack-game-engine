@@ -10,7 +10,8 @@ import { ProjectLoader } from '../project/ProjectLoader';
 import { ProjectStore } from '../project/ProjectStore';
 import type { Project } from '../project/types';
 import { engineOptionsFor, runProject } from '../project/runProject';
-import { smokeScene2D, smokeScene3D, smokeScripts } from './smoke';
+import type { WebGLRenderer } from '../render/WebGLRenderer';
+import { showcaseMeshes, smokeScene2D, smokeScene3D, smokeSceneShowcase, smokeScripts } from './smoke';
 
 const params = new URLSearchParams(location.search);
 const app = document.getElementById('app')!;
@@ -57,7 +58,8 @@ function toolbar(engine: Engine): void {
   engine.events.on('afterRender', () => {
     if (engine.clock.frame % 15 !== 0) return;
     const s = engine.renderer?.stats;
-    stats.textContent = `${engine.clock.fps.toFixed(0)} fps · tick ${engine.clock.tick} · ${engine.world.entityCount} entities` + (s ? ` · ${s.drawCalls} draws` : '');
+    const extra = s && engine.renderer?.kind === '3d' ? ` · ${s.drawCalls} draws · ${s.instances} inst · ${(s.triangles / 1000).toFixed(0)}k tris · ${s.culled} culled` : s ? ` · ${s.drawCalls} draws` : '';
+    stats.textContent = `${engine.clock.fps.toFixed(0)} fps · tick ${engine.clock.tick} · ${engine.world.entityCount} entities` + extra;
   });
 }
 
@@ -102,12 +104,25 @@ async function main(): Promise<void> {
       if (room && project.settings.network.mode !== 'none') await joinRoom(engine, project);
     } else {
       const is3d = rendererParam === '3d';
-      document.title = is3d ? 'Forge Player – 3D smoke test' : 'Forge Player – 2D smoke test';
+      const showcase = is3d && params.get('showcase') === '1';
+      document.title = showcase ? 'Forge Player – renderer showcase' : is3d ? 'Forge Player – 3D smoke test' : 'Forge Player – 2D smoke test';
       engine = Engine.create(canvas, { renderer: is3d ? '3d' : '2d', pixelsPerUnit: 48, seed: 42, touchOverlay: { joystick: true, buttons: [{ name: 'jump' }] } });
       engine.diagnostics.on('error', (d) => console.error('[forge]', d.message, d.error ?? ''));
       engine.scripting.load(smokeScripts);
-      engine.loadScene(is3d ? smokeScene3D() : smokeScene2D());
-      engine.hud.text('hint', is3d ? 'Drag to orbit · wheel to zoom · ?renderer=2d for the 2D scene' : 'WASD / arrows to move · Space to jump · ?renderer=3d for the 3D scene', { anchor: 'top', y: 10 });
+      if (showcase) {
+        const renderer = engine.renderer as WebGLRenderer;
+        for (const [name, data] of Object.entries(showcaseMeshes())) renderer.addMesh(name, data);
+        const time = parseFloat(params.get('time') ?? '17.5');
+        const cycleSpeed = parseFloat(params.get('cycle') ?? '0');
+        const num = (k: string) => { const v = parseFloat(params.get(k) ?? ''); return Number.isFinite(v) ? v : undefined; };
+        engine.loadScene(smokeSceneShowcase(Number.isFinite(time) ? time : 17.5, {
+          cycleSpeed: Number.isFinite(cycleSpeed) ? cycleSpeed : 0, still: params.get('still') === '1',
+          yaw: num('yaw'), pitch: num('pitch'), distance: num('dist'), clouds: num('clouds'),
+          post: params.get('post') !== '0', shadows: params.get('shadows') !== '0',
+        }));
+        engine.hud.text('hint', 'Renderer showcase · drag to orbit · ?time=0..24 sets the hour · &cycle=0.2 animates the day', { anchor: 'top', y: 10 });
+      } else engine.loadScene(is3d ? smokeScene3D() : smokeScene2D());
+      if (!showcase) engine.hud.text('hint', is3d ? 'Drag to orbit · wheel to zoom · ?renderer=2d for the 2D scene · &showcase=1 for the renderer showcase' : 'WASD / arrows to move · Space to jump · ?renderer=3d for the 3D scene', { anchor: 'top', y: 10 });
       // The smoke scenes honour ?room= too (host-authoritative defaults) so multiplayer can be tried without a project.
       if (room) await joinRoom(engine);
     }
