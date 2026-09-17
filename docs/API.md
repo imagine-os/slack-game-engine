@@ -183,14 +183,56 @@ interface Renderer {
   init(host: RendererHost): void; resize(w, h, pixelRatio?): void; render(world: World, alpha: number): void;
   screenToWorld(sx, sy, out: Vec3): Vec3; worldToScreen(p: Vec3Like, out: Vec2): Vec2; dispose(): void;
 }
+interface RenderStats { drawCalls; primitives; batches; instances; triangles; culled; shadowDrawCalls; postDrawCalls }
+interface RendererOptions { pixelsPerUnit?; hidpi?; pixelPerfect?; clearColor?; preserveDrawingBuffer?;
+  shadows?: boolean; shadowMapSize?: number; renderScale?: number; autoQuality?: boolean }   // 3D-only knobs
 class Canvas2DRenderer implements Renderer { readonly ctx; readonly camera: { x; y; zoom; angle }; pixelPerfect; hidpi }
-class WebGLRenderer implements Renderer { readonly gl: WebGL2RenderingContext; readonly viewProj: Mat4; readonly cameraPosition: Vec3;
-  addMesh(name: string, data: MeshData): void; screenRay(sx, sy, origin: Vec3, dir: Vec3): void }
+class WebGLRenderer implements Renderer {
+  readonly gl: WebGL2RenderingContext; readonly viewProj: Mat4; readonly cameraPosition: Vec3;
+  readonly post: PostSettings;          // live post-processing settings (copied from an enabled PostProcessSettings component)
+  readonly sky: SkyState;               // resolved sun direction, palette, ambient and fog colour of the last frame
+  readonly wind: { direction: Vec3; strength: number };
+  readonly autoQuality: AutoQuality;    // quality ladder (enable with .enabled = true)
+  readonly shadowFit: ShadowFit;        // light view/projection of the last frame
+  time: number; autoTime: boolean;      // animation clock for wind/waves/clouds
+  shadowsEnabled: boolean; shadowMapSize: number; renderScale: number; readonly linear: boolean; readonly hdrSupported: boolean;
+  addMesh(name: string, data: MeshData): void; hasMesh(name): boolean; screenRay(sx, sy, origin: Vec3, dir: Vec3): void;
+  setCameraShake(amplitude: number, decay = 5): void;
+}
 class DebugDraw { enabled; line(a, b, color?); line3(a, b, color?); rect(cx, cy, w, h, color?, angle?); circle(cx, cy, r, color?); polygon(points, color?); box3(min, max, color?); text(x, y, text, color?); clear() }
-// Components: Camera2D, Sprite, AnimatedSprite, Shape, Text, Tilemap, ParticleEmitter, Light2D, MeshRenderer, Camera3D, Light
+// 2D components: Camera2D, Sprite, AnimatedSprite, Shape, Text, Tilemap, ParticleEmitter, Light2D
 // Systems: AnimatedSpriteSystem, Camera2DSystem, ParticleSystem (installed by Engine)
-// WebGL helpers: MeshData, GPUMesh, createCube/createSphere/createPlane/createCylinder, PRIMITIVES, parseGLTF/parseGLB/loadGLTF, OrbitController, Shader
+
+// 3D components
+class MeshRenderer { mesh; color; metallic; roughness; emissive; emissiveStrength = 1; texture; unlit; unlitFog = true; wireframe; doubleSided; opacity; visible; instanced;
+  vertexColors = true; flatShading = false; windStrength = 0; castShadow = true; receiveShadow = true; frustumCulled = true; lods: LodLevel[] = [] }
+interface LodLevel { mesh: string; distance: number }   // ascending distance; '' hides the mesh
+class Camera3D { fov; near; far; orthographic; orthoSize; active; priority; clearColor; skyTop; skyBottom; skybox; fogEnabled; fogColor; fogNear; fogFar; lookAt: Entity }
+class Light { kind: 'directional'|'point'|'ambient'; color; intensity; range; enabled;
+  castShadows = false; shadowDistance = 60; shadowBias = 0.05; shadowNormalBias = 1.5; shadowSoftness = 1 }
+class SkySettings { enabled; mode: 'gradient'|'procedural'; timeOfDay = 17.5; sunAzimuth; sunElevationScale; turbidity; sunSize; sunGlow; stars; clouds; cloudSpeed; cloudHeight;
+  exposure; tint: Color; driveLight = true; sunIntensity; moonIntensity; ambientIntensity; fogEnabled = true; fogDensity; fogStart; fogHeightFalloff; fogHeight; fogSunBlend }
+class PostProcessSettings { enabled; hdr; msaa; bloom; bloomThreshold; bloomSoftKnee; bloomIntensity; bloomRadius; exposure; tonemap: 'none'|'aces'|'reinhard';
+  saturation; contrast; lift: Color; gamma: Color; gain: Color; vignette; vignetteSmoothness; fxaa; chromaticAberration }
+class WaterMaterial { deepColor; shallowColor; foamColor; waveAmplitude; waveLength; waveSpeed; waveSteepness; waveDirection; shorelineHeight; foamWidth = 0; crestFoam; fresnel; specular; opacity; flatShading }
+
+// WebGL helpers
+interface MeshData { name?; positions; normals?; uvs?; colors?: Float32Array; indices; baseColor?; bounds?: MeshBounds }
+function computeNormals(positions, indices): Float32Array; computeBounds(positions): MeshBounds; boundsSphere(bounds): { center; radius }
+class GPUMesh { hasColors; bounds; boundsCenter; boundsRadius; ... }
+// createCube/createSphere/createPlane/createCylinder, PRIMITIVES, parseGLTF/parseGLB/loadGLTF (imports COLOR_0), OrbitController, Shader
+class Frustum { setFromMatrix(viewProj): this; containsSphere(x, y, z, r): boolean; containsPoint(x, y, z): boolean }
+function transformSphere(m: Float32Array, center, radius, out: Float32Array): Float32Array; selectLod(lods, distance): number
+function fitDirectionalShadow(camInvViewProj: Mat4, ndcFarDepth, lightDir, mapSize, out: ShadowFit): ShadowFit; perspectiveNdcDepth(d, near, far): number; createShadowFit(): ShadowFit
+function sunElevation(timeOfDay, elevationScale?): number; sunDirection(timeOfDay, azimuthDeg, elevationScale, out: Vec3): Vec3; evaluateSky(params: SkyParams, out: SkyState): SkyState; createSkyState(): SkyState
+interface PostSettings { /* same fields as PostProcessSettings */ }
+function defaultPostSettings(): PostSettings; copyPostSettings(from, to): PostSettings; postSettingsToJSON(s): PostSettingsJSON; postSettingsFromJSON(json, into?): PostSettings
+class AutoQuality { enabled; lowFps; highFps; settleTime; recoverTime; levels: QualityLevel[]; level; fps; current; setLevel(i); sample(dt): number }
+interface QualityLevel { name; renderScale; shadowMapSize; msaa; bloom; fxaa }   // DEFAULT_QUALITY_LEVELS
+class ShadowMap { size; texture; resize(size); begin(); end(); dispose() }   class PostProcess { floatSupported; begin(w, h, settings); end(outW, outH, settings); dispose() }
 ```
+
+See `docs/RENDERING.md` for how the passes fit together and how to enable each feature.
 
 ## Physics
 
