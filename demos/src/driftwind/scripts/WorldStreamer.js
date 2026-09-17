@@ -20,7 +20,7 @@ defineScript({
   onStart(ctx) {
     const s = ctx.state;
     const P = pg(ctx);
-    s.loaded = {}; s.anim = []; s.streaks = []; s.islandLods = []; s.ready = false; s.flocks = [];
+    s.loaded = {}; s.anim = []; s.streaks = []; s.islandLods = []; s.ready = false; s.flocks = []; s.pending = [];
     s.tmpQ = new ctx.math.Quat();
     if (!P) {
       ctx.warn('Driftwind needs the procgen plugin (engine.use(procgenPlugin)); the world will be empty.');
@@ -173,14 +173,26 @@ defineScript({
     return cam ? ctx.getOn(cam, 'Transform').position : { x: 0, y: 50, z: 0 };
   },
 
-  /** Load/unload chunks around the focus and switch island LODs. */
+  /**
+   * Load/unload chunks around the focus and switch island LODs. Entered chunks are queued
+   * (nearest first) and drained by `onUpdate` under a time budget, so a seed change or the
+   * first load never blocks the main thread for seconds (which would starve the network
+   * heartbeats and get a guest dropped from the room); only the chunk under the focus loads
+   * synchronously so the world beneath the player is never empty.
+   */
   stream(ctx) {
-    const s = ctx.state;
+    const s = ctx.state, W = s.world;
     if (!s.ready) return;
     const pos = this.focus(ctx);
     const { entered, exited } = s.tracker.update(pos, ctx.props.streamRadius);
-    for (const key of exited) this.unloadChunk(ctx, key);
-    for (const key of entered) this.loadChunk(ctx, key);
+    for (const key of exited) { this.unloadChunk(ctx, key); const i = s.pending.indexOf(key); if (i >= 0) s.pending.splice(i, 1); }
+    for (const key of entered) if (!s.pending.includes(key)) s.pending.push(key);
+    const here = W.chunkKey(pos.x, pos.z);
+    const hi = s.pending.indexOf(here);
+    if (hi >= 0) { s.pending.splice(hi, 1); this.loadChunk(ctx, here); }
+    const cs = W.chunkSize;
+    const d2 = (key) => { const [cx, cz] = key.split(',').map(Number); const x = (cx + 0.5) * cs - pos.x, z = (cz + 0.5) * cs - pos.z; return x * x + z * z; };
+    s.pending.sort((a, b) => d2(a) - d2(b));
     if (s.sea) s.sea.t.setPosition(Math.round(pos.x / 100) * 100, s.seaY, Math.round(pos.z / 100) * 100);
     const lodD2 = ctx.props.lodDistance * ctx.props.lodDistance;
     for (const isl of s.islandLods) {
@@ -194,8 +206,20 @@ defineScript({
     }
   },
 
+  /** Load queued chunks for at most `budgetMs` of wall-clock time (at least one per call). */
+  drain(ctx, budgetMs) {
+    const s = ctx.state, P = pg(ctx);
+    if (!s.pending.length) return;
+    const start = P.env.now();
+    do {
+      const key = s.pending.shift();
+      if (s.tracker.active.has(key) && !s.loaded[key]) this.loadChunk(ctx, key);
+    } while (s.pending.length && P.env.now() - start < budgetMs);
+  },
+
   loadChunk(ctx, key) {
     const s = ctx.state, W = s.world;
+    if (s.loaded[key]) return;
     const content = W.contentOf(key);
     const chunk = { entities: [], anim: [], lods: [], flocks: [] };
     s.loaded[key] = chunk;
@@ -297,7 +321,7 @@ defineScript({
     if (s.streaks) for (const st of s.streaks) if (ctx.world.isAlive(st.entity)) ctx.destroy(st.entity);
     if (s.sea && ctx.world.isAlive(s.sea.entity)) ctx.destroy(s.sea.entity);
     s.sea = null;
-    s.loaded = {}; s.anim = []; s.streaks = []; s.islandLods = [];
+    s.loaded = {}; s.anim = []; s.streaks = []; s.islandLods = []; s.pending = [];
     if (s.tracker) s.tracker.clear();
   },
 
@@ -314,6 +338,7 @@ defineScript({
   onUpdate(ctx, dt) {
     const s = ctx.state;
     if (!s.ready) return;
+    this.drain(ctx, 6);
     const time = ctx.time.elapsed;
     for (const a of s.anim) {
       const t = a.t;

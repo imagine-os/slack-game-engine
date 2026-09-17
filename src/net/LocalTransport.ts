@@ -7,7 +7,7 @@ export interface LocalTransportOptions {
   discoveryMs?: number;
   /** Heartbeat period (ms). Default 500. */
   heartbeatMs?: number;
-  /** Missed heartbeat window before a host is declared gone (ms). Default 2000. */
+  /** Missed heartbeat window before a member is declared gone (ms). Default 4000: long enough to ride out a tab's GC pause or a burst of synchronous loading. */
   timeoutMs?: number;
   /** Channel name prefix. Default `forge-room-`. */
   prefix?: string;
@@ -51,7 +51,7 @@ export class LocalTransport implements Transport {
   private onPageHide = (): void => { void this.disconnect(); };
 
   constructor(opts: LocalTransportOptions = {}) {
-    this.opts = { discoveryMs: opts.discoveryMs ?? 250, heartbeatMs: opts.heartbeatMs ?? 500, timeoutMs: opts.timeoutMs ?? 2000, prefix: opts.prefix ?? 'forge-room-' };
+    this.opts = { discoveryMs: opts.discoveryMs ?? 250, heartbeatMs: opts.heartbeatMs ?? 500, timeoutMs: opts.timeoutMs ?? 4000, prefix: opts.prefix ?? 'forge-room-' };
   }
 
   static get supported(): boolean {
