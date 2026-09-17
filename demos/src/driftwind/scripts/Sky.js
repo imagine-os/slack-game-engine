@@ -24,19 +24,6 @@ defineScript({
     // ?time=HH.H pins the hour (screenshots, share links).
     const pinned = P ? parseFloat(P.env.param('time') || '') : NaN;
     s.pinned = Number.isFinite(pinned) ? ((pinned % 24) + 24) % 24 : null;
-    // Quality ladder: keep bloom on and the shadow map size fixed at every level. Disabling bloom
-    // after it ran leaves the composite's bloom sampler on the shadow-map unit (black frame +
-    // GL_INVALID_OPERATION), and a shadow-map resize logs the same GL warning for a frame.
-    const r = ctx.engine.renderer;
-    if (r && r.autoQuality && Array.isArray(r.autoQuality.levels)) {
-      r.autoQuality.levels = [
-        { name: 'ultra', renderScale: 1, shadowMapSize: 2048, msaa: 4, bloom: true, fxaa: true },
-        { name: 'high', renderScale: 1, shadowMapSize: 2048, msaa: 2, bloom: true, fxaa: true },
-        { name: 'medium', renderScale: 0.85, shadowMapSize: 2048, msaa: 0, bloom: true, fxaa: true },
-        { name: 'low', renderScale: 0.7, shadowMapSize: 2048, msaa: 0, bloom: true, fxaa: false },
-        { name: 'potato', renderScale: 0.5, shadowMapSize: 2048, msaa: 0, bloom: true, fxaa: false },
-      ];
-    }
     if (s.sky) {
       s.sky.enabled = true;
       // Fog: thin and warm around the islands, thickening toward the sea far below.
@@ -89,7 +76,7 @@ defineScript({
         const elev = Math.max(0.08, Math.sin(a));
         const dir = ctx.state.dir.set(Math.cos(a) * 0.8, -elev, 0.45).normalize();
         st.setPosition(-dir.x * 200, -dir.y * 200, -dir.z * 200);
-        st.updateWorldMatrix(true);
+        st.updateWorldMatrix();
         st.lookAt(new ctx.math.Vec3(0, 0, 0));
       }
     }

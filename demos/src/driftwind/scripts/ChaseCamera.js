@@ -68,14 +68,14 @@ defineScript({
     const gp = gt.position;
     if (s.prev && dt > 0) s.speed = M.damp(s.speed, Math.min(200, Math.hypot(gp.x - s.prev.x, gp.y - s.prev.y, gp.z - s.prev.z) / dt), 5, dt);
     s.prev = { x: gp.x, y: gp.y, z: gp.z };
-    gt.updateWorldMatrix(true);
+    gt.updateWorldMatrix();
     gt.forward(s.fwd);
     s.shake = Math.max(0, s.shake - dt * 1.8);
     if (s.photo) {
       s.orbit += dt * 0.22;
       const r = 8 + Math.sin(s.orbit * 0.5) * 2, h = 2 + Math.sin(s.orbit * 0.31) * 1.5;
       t.setPosition(gp.x + Math.cos(s.orbit) * r, gp.y + h, gp.z + Math.sin(s.orbit) * r);
-      t.updateWorldMatrix(true);
+      t.updateWorldMatrix();
       t.lookAt(s.look.set(gp.x, gp.y, gp.z));
       if (cam) cam.fov = M.damp(cam.fov, 45, 2, dt);
       this.streaks(ctx, dt, gp, 0);
@@ -90,7 +90,7 @@ defineScript({
     const nx = M.damp(t.x, tx, k, dt), ny = M.damp(t.y, ty, k * 0.8, dt), nz = M.damp(t.z, tz, k, dt);
     const sh = s.shake * s.shake * 0.5;
     t.setPosition(nx + (Math.random() - 0.5) * sh, ny + (Math.random() - 0.5) * sh, nz + (Math.random() - 0.5) * sh);
-    t.updateWorldMatrix(true);
+    t.updateWorldMatrix();
     s.look.set(gp.x + s.fwd.x * ctx.props.lookAhead, gp.y + s.fwd.y * ctx.props.lookAhead * 0.6 + 0.6, gp.z + s.fwd.z * ctx.props.lookAhead);
     t.lookAt(s.look);
     if (cam) cam.fov = M.damp(cam.fov, ctx.props.fov + s.speed * ctx.props.fovPerSpeed, 3, dt);
@@ -107,7 +107,7 @@ defineScript({
     const sp = W ? W.spawn(0).position : { x: 0, y: 50, z: 0 };
     const a = s.cinema * 0.06 + 2.2;
     t.setPosition(sp.x + Math.cos(a) * 95, sp.y + 22 + Math.sin(a * 0.7) * 5, sp.z + Math.sin(a) * 95);
-    t.updateWorldMatrix(true);
+    t.updateWorldMatrix();
     t.lookAt(s.look.set(sp.x, sp.y - 10, sp.z));
     const cam = ctx.get('Camera3D');
     if (cam) cam.fov = 58;
@@ -135,7 +135,7 @@ defineScript({
       const rx = -s.fwd.z, rz = s.fwd.x;
       st.t.setPosition(gp.x + s.fwd.x * st.off.z + rx * st.off.x, gp.y + st.off.y + s.fwd.y * st.off.z, gp.z + s.fwd.z * st.off.z + rz * st.off.x);
       st.t.setScale(1, 1, 1 + speed / 25);
-      st.t.updateWorldMatrix(true);
+      st.t.updateWorldMatrix();
       st.t.lookAt(s.look.set(st.t.x + s.fwd.x, st.t.y + s.fwd.y, st.t.z + s.fwd.z));
       st.mr.opacity = 0.08 + Math.min(0.35, intensity * 0.3) * Math.sin(st.life * Math.PI);
     }

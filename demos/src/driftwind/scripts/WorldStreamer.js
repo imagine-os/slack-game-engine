@@ -40,7 +40,11 @@ defineScript({
     P.world = W;
     s.world = W;
     s.tracker = P.createTracker(W);
+    const oldPrefix = s.prefix;
     s.prefix = `${W.seed}:`;
+    // Free the previous seed's GPU meshes once every script has re-pointed at the new ones
+    // (gliders, ghosts and speed streaks swap their meshes on the same `worldSeed` message).
+    if (oldPrefix && oldPrefix !== s.prefix) ctx.timer(1, () => { if (ctx.state.prefix !== oldPrefix) P.unregisterPrefix(oldPrefix); });
     // Wind currents are global: a trail of translucent streaks that flow along each spline.
     const streakDesc = this.reg(ctx, 'wind-streak');
     for (const wind of W.winds) {
@@ -289,7 +293,7 @@ defineScript({
       const p = pointOn(st.wind.points, st.s);
       st.t.setPosition(p.x + st.off.x, p.y + st.off.y, p.z + st.off.z);
       const q = pointOn(st.wind.points, Math.min(st.length, st.s + 2));
-      st.t.updateWorldMatrix(true);
+      st.t.updateWorldMatrix();
       st.t.lookAt(new ctx.math.Vec3(q.x + st.off.x, q.y + st.off.y, q.z + st.off.z));
     }
   },

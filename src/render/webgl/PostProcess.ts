@@ -42,6 +42,8 @@ export class PostProcess {
   private curFormat = 0;
   private curSamples = 0;
   private curFxaa = false;
+  /** 1x1 black texture bound to the bloom sampler when bloom is off, so the composite never samples a stale unit. */
+  private readonly blackTexture: WebGLTexture;
   /** Draw calls issued by the last `end()`. */
   drawCalls = 0;
 
@@ -63,6 +65,14 @@ export class PostProcess {
     this.up = new Shader(gl, POST_VS, BLOOM_UP_FS, 'bloom-up');
     this.composite = new Shader(gl, POST_VS, COMPOSITE_FS, 'composite');
     this.fxaa = new Shader(gl, POST_VS, FXAA_FS, 'fxaa');
+    const black = gl.createTexture();
+    if (!black) throw new Error('Failed to create texture');
+    this.blackTexture = black;
+    gl.bindTexture(gl.TEXTURE_2D, black);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
   /** Internal colour format that will be used for the given settings. */
@@ -236,7 +246,9 @@ export class PostProcess {
     const c = this.composite;
     c.use();
     this.bindTex(c, 'uScene', resolve.tex, 0);
-    if (bloomTex) this.bindTex(c, 'uBloom', bloomTex, 1);
+    // Unit 1 otherwise still holds the shadow map (a depth-compare texture): sampling it through a plain
+    // sampler2D is GL_INVALID_OPERATION and blacks out the frame, even behind a `uHasBloom` branch.
+    this.bindTex(c, 'uBloom', bloomTex ?? this.blackTexture, 1);
     c.setBool('uHasBloom', !!bloomTex);
     c.setBool('uLinear', this.isLinear(settings));
     c.setInt('uTonemap', settings.tonemap === 'aces' ? 1 : settings.tonemap === 'reinhard' ? 2 : 0);
@@ -284,6 +296,7 @@ export class PostProcess {
   dispose(): void {
     this.release();
     this.prefilter.dispose(); this.down.dispose(); this.up.dispose(); this.composite.dispose(); this.fxaa.dispose();
+    this.gl.deleteTexture(this.blackTexture);
     this.gl.deleteVertexArray(this.vao);
   }
 }

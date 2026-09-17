@@ -229,6 +229,27 @@ export class WebGLRenderer implements Renderer, QualityTarget {
     this.meshes.set(name, new GPUMesh(this.gl, data));
   }
 
+  /**
+   * Unregister a mesh added with {@link addMesh} (GPU buffers are freed and
+   * batches referencing it dropped). Returns false when the name is unknown.
+   * `MeshRenderer`s still pointing at the name fall back to the cube with a warning.
+   */
+  removeMesh(name: string): boolean {
+    const mesh = this.meshes.get(name);
+    if (!mesh) return false;
+    mesh.dispose();
+    this.meshes.delete(name);
+    for (const [key, b] of this.batches) if (b.mesh === mesh) this.batches.delete(key);
+    return true;
+  }
+
+  /** Remove every registered mesh whose name starts with `prefix`; returns how many were removed. */
+  removeMeshes(prefix: string): number {
+    let n = 0;
+    for (const name of Array.from(this.meshes.keys())) if (name.startsWith(prefix) && this.removeMesh(name)) n++;
+    return n;
+  }
+
   /** True when a mesh name resolves without falling back to the cube. */
   hasMesh(name: string): boolean {
     return this.meshes.has(name) || !!PRIMITIVES[name] || (name.startsWith('gltf:') && !!this.host?.getAsset(name.slice(5).split('#')[0]));

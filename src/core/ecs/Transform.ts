@@ -40,6 +40,8 @@ export class Transform extends Component {
   /** @internal child Transform instances, maintained by World.setParent */
   readonly _childTransforms: Transform[] = [];
   private _dirty = true;
+  /** Children still need this transform's last change propagated (set by a non-recursive update). */
+  private _childrenStale = false;
 
   // ---- 2D conveniences ----
 
@@ -127,9 +129,13 @@ export class Transform extends Component {
       this.worldVersion++;
     }
     if (recurse) {
+      // A non-recursive update (a script reading this transform's world matrix mid-frame)
+      // leaves the children behind; remember that so the next full pass still reaches them.
+      const propagate = changed || this._childrenStale;
+      this._childrenStale = false;
       const kids = this._childTransforms;
-      for (let i = 0; i < kids.length; i++) kids[i].updateWorldMatrix(true, changed);
-    }
+      for (let i = 0; i < kids.length; i++) kids[i].updateWorldMatrix(true, propagate);
+    } else if (changed && this._childTransforms.length > 0) this._childrenStale = true;
   }
 
   /** World-space position (reads the last computed world matrix). */

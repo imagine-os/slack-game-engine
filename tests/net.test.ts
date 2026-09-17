@@ -222,6 +222,45 @@ describe('NetHub channels and presence', () => {
 // ------------------------------------------------------- host authoritative
 
 describe('HostAuthoritativeSync', () => {
+  it('re-sends hello every second until the host answers when the first one is lost', async () => {
+    const net = new MemoryNetwork();
+    let dropped = 0;
+    // Drop the very first control message the client sends (its hello).
+    net.filter = ({ data }) => {
+      const t = (data as { d?: { t?: string } })?.d?.t ?? (data as { t?: string })?.t;
+      if (t === 'hello' && dropped === 0) { dropped++; return false; }
+      return true;
+    };
+    const h = await makePeer(net, 'g', 'Host');
+    const c = await makePeer(net, 'g', 'Client');
+    expect(dropped).toBe(1); // the hello sent on connect was dropped at the network
+    pump([h, c], net, 3);
+    expect(c.sync.handshakeComplete).toBe(false);
+    expect(c.sync.players().length).toBeLessThan(2);
+    // Under a second: no retry yet.
+    pump([h, c], net, 30);
+    expect(c.sync.helloAttempts).toBe(1);
+    // Past a second: a second hello goes out and the host welcomes the client.
+    pump([h, c], net, 40);
+    expect(c.sync.helloAttempts).toBe(2);
+    expect(c.sync.handshakeComplete).toBe(true);
+    expect(c.sync.players().map((p) => p.displayName).sort()).toEqual(['Client', 'Host']);
+    expect(h.sync.players().map((p) => p.displayName).sort()).toEqual(['Client', 'Host']);
+    // Once welcomed, no further hellos are sent.
+    pump([h, c], net, 130);
+    expect(c.sync.helloAttempts).toBe(2);
+  });
+
+  it('gives up re-sending hello after HELLO_MAX_TRIES', async () => {
+    const net = new MemoryNetwork();
+    net.filter = ({ data }) => ((data as { d?: { t?: string } })?.d?.t ?? (data as { t?: string })?.t) !== 'hello';
+    const h = await makePeer(net, 'g', 'Host');
+    const c = await makePeer(net, 'g', 'Client');
+    pump([h, c], net, 60 * 12);
+    expect(c.sync.helloAttempts).toBe(HostAuthoritativeSync.HELLO_MAX_TRIES);
+    expect(c.sync.handshakeComplete).toBe(false);
+  });
+
   it('handshakes, exposes the roster and emits playerJoined', async () => {
     const net = new MemoryNetwork();
     const h = await makePeer(net, 'g', 'Host');

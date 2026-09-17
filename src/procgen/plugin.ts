@@ -120,6 +120,10 @@ export interface ProcgenAPI {
   registerGenerated(name: string, generated: GeneratedMesh): RegisteredMesh;
   /** Registered descriptor for a name, if any. */
   registered(name: string): RegisteredMesh | undefined;
+  /** Forget a registered object and free its renderer meshes (`name`, `name/<group>`, `name/base`). Returns true when it was registered. */
+  unregister(name: string): boolean;
+  /** Unregister every name starting with `prefix` (a world's `<seed>:`); returns how many objects were dropped. */
+  unregisterPrefix(prefix: string): number;
   /** Register a world library key (`tree-meadow-pine-0`) and return its descriptor. */
   registerLibrary(world: WorldGenerator, key: string): RegisteredMesh;
   /** Apply a group's material hints to a MeshRenderer-like component. */
@@ -242,6 +246,23 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
       return desc;
     },
     registered: (name) => registry.get(name),
+    unregister: (name) => {
+      const desc = registry.get(name);
+      if (!desc) return false;
+      registry.delete(name);
+      const r = engine.renderer as RendererLike | null;
+      if (r && typeof r.removeMesh === 'function') {
+        r.removeMesh(desc.mesh);
+        for (const g of desc.groups) r.removeMesh(g.mesh);
+        if (desc.base) r.removeMesh(desc.base.mesh);
+      }
+      return true;
+    },
+    unregisterPrefix: (prefix) => {
+      let n = 0;
+      for (const name of Array.from(registry.keys())) if (name.startsWith(prefix) && api.unregister(name)) n++;
+      return n;
+    },
     registerLibrary: (world, key) => registry.get(key) ?? api.registerGenerated(key, world.library(key)),
     applyMaterial: (target, group) => {
       const color = target.color as { set?(r: number, g: number, b: number, a?: number): void } | undefined;

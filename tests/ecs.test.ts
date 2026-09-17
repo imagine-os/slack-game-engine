@@ -123,6 +123,32 @@ describe('Transform hierarchy', () => {
     expect(ct.position.x).toBeCloseTo(2);
     expect(ct.getWorldPosition().x).toBeCloseTo(7);
   });
+
+  it('still propagates to children after a non-recursive updateWorldMatrix cleared the dirty flag', () => {
+    // Regression: a script reading a moving parent's world matrix mid-frame calls
+    // updateWorldMatrix() (non-recursive); the later world.updateTransforms() must
+    // not skip the children just because the parent is no longer dirty.
+    const w = new World();
+    const parent = w.createEntity('P');
+    const child = w.createEntity('C');
+    w.setParent(child, parent);
+    const pt = w.getComponent(parent, Transform)!;
+    const ct = w.getComponent(child, Transform)!;
+    ct.setPosition(1, 0, 0);
+    w.updateTransforms();
+    expect(ct.getWorldPosition().x).toBeCloseTo(1);
+    pt.setPosition(10, 0, 0);
+    pt.updateWorldMatrix(); // non-recursive: parent world matrix is fresh, child untouched
+    expect(pt.getWorldPosition().x).toBeCloseTo(10);
+    expect(pt.dirty).toBe(false);
+    const before = ct.worldVersion;
+    w.updateTransforms();
+    expect(ct.getWorldPosition().x).toBeCloseTo(11);
+    expect(ct.worldVersion).toBe(before + 1);
+    // A pass with nothing changed leaves the child alone.
+    w.updateTransforms();
+    expect(ct.worldVersion).toBe(before + 1);
+  });
 });
 
 describe('Scene serialization', () => {

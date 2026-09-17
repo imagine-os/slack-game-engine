@@ -16,6 +16,11 @@ export interface MemoryNetworkOptions {
   seed?: number;
   /** Deliver immediately on `send` when latency is 0 (default false: call `flush()` / `advance()`). */
   autoFlush?: boolean;
+  /**
+   * Per-message drop hook for tests: return false to drop a message (counted in
+   * `dropped`). Runs before the random loss model. Default: keep everything.
+   */
+  filter?: (msg: { from: PeerId; to: PeerId; data: NetPayload; reliable: boolean }) => boolean;
 }
 
 interface Pending {
@@ -41,7 +46,9 @@ interface Room {
  * can interleave engine steps and message delivery precisely.
  */
 export class MemoryNetwork {
-  readonly options: Required<MemoryNetworkOptions>;
+  readonly options: Required<Omit<MemoryNetworkOptions, 'filter'>>;
+  /** Optional drop hook (see {@link MemoryNetworkOptions.filter}); assignable at any time. */
+  filter: MemoryNetworkOptions['filter'];
   /** Virtual clock in ms. */
   time = 0;
   private queue: Pending[] = [];
@@ -63,6 +70,7 @@ export class MemoryNetwork {
       seed: opts.seed ?? 1234,
       autoFlush: opts.autoFlush ?? false,
     };
+    this.filter = opts.filter;
     this.random = new Random(this.options.seed);
   }
 
@@ -123,6 +131,10 @@ export class MemoryNetwork {
     for (const m of room.members) {
       if (m === from) continue;
       if (to !== 'all' && m.localId !== to) continue;
+      if (this.filter && !this.filter({ from: from.localId, to: m.localId, data, reliable })) {
+        this.dropped++;
+        continue;
+      }
       if (this.options.loss > 0 && (!reliable || this.options.lossAffectsReliable) && this.random.next() < this.options.loss) {
         this.dropped++;
         continue;

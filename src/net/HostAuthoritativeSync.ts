@@ -146,6 +146,14 @@ export class HostAuthoritativeSync implements NetSync {
   private axisNames: string[] = [];
   private policy: EntitySyncPolicy = { groups: 0, posThreshold: 1, rotThreshold: 1 };
   private hostIdCache: PeerId = '';
+  /** Client handshake: seconds since the last `hello`, how many were sent, and whether a `welcome` arrived. */
+  private helloTimer = 0;
+  private helloTries = 0;
+  private welcomed = false;
+  /** Re-send `hello` this often until the host answers. */
+  static readonly HELLO_RETRY_INTERVAL = 1;
+  /** Give up re-sending after this many attempts (the first send included). */
+  static readonly HELLO_MAX_TRIES = 10;
 
   constructor(readonly engine: Engine, options: Partial<HostSyncOptions> = {}) {
     this.options = {
@@ -219,6 +227,8 @@ export class HostAuthoritativeSync implements NetSync {
     this.history.clear();
     this.known.clear();
     this.pendingSpawns.length = 0;
+    this.welcomed = false;
+    this.helloTries = 0;
     this.events.emit('disconnected', { reason: 'stopped' });
   }
 
@@ -236,7 +246,37 @@ export class HostAuthoritativeSync implements NetSync {
     }
   }
 
+  /**
+   * Client → host handshake. The first `hello` can be lost (a transport that
+   * connects before the host's channel is listening, a dropped reliable
+   * message on a lossy link), so {@link update} re-sends it every
+   * {@link HostAuthoritativeSync.HELLO_RETRY_INTERVAL} seconds until a `welcome`
+   * arrives, up to {@link HostAuthoritativeSync.HELLO_MAX_TRIES} times.
+   */
   private sendHello(): void {
+    const hello: Ctl = { t: 'hello', name: this.engine.net.displayName || this.localId };
+    this.welcomed = false;
+    this.helloTimer = 0;
+    this.helloTries = 1;
+    this.ctl.send('host', hello);
+  }
+
+  /** Number of `hello` messages sent for the current handshake (tests and diagnostics). */
+  get helloAttempts(): number {
+    return this.helloTries;
+  }
+
+  /** True once the host answered the handshake (always true on the host). */
+  get handshakeComplete(): boolean {
+    return this.isHost || this.welcomed;
+  }
+
+  private retryHello(dt: number): void {
+    if (this.isHost || this.welcomed || this.helloTries === 0 || this.helloTries >= HostAuthoritativeSync.HELLO_MAX_TRIES) return;
+    this.helloTimer += dt;
+    if (this.helloTimer < HostAuthoritativeSync.HELLO_RETRY_INTERVAL) return;
+    this.helloTimer = 0;
+    this.helloTries++;
     const hello: Ctl = { t: 'hello', name: this.engine.net.displayName || this.localId };
     this.ctl.send('host', hello);
   }
@@ -266,6 +306,7 @@ export class HostAuthoritativeSync implements NetSync {
     this.engine.net.update();
     if (this.updates++ >= 1) this.flushDeferred();
     if (!this.transport.connected) return;
+    this.retryHello(dt);
     this.flushSpawns();
     this.sendAccum += dt;
     const interval = 1 / this.options.tickRate;
@@ -1041,6 +1082,7 @@ export class HostAuthoritativeSync implements NetSync {
   }
 
   private onWelcome(msg: Ctl & { t: 'welcome' }): void {
+    this.welcomed = true;
     this.hostIdCache = msg.hostId;
     this.tick = msg.tick;
     this.retargetLocalOwners(msg.hostId);
