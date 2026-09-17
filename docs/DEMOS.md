@@ -10,6 +10,7 @@ and works as a template for your own game. All of them run offline with the
 
 | Demo | Renderer | Players | What it shows | Controls |
 | --- | --- | --- | --- | --- |
+| [Driftwind](../public/demos/driftwind/README.md) `driftwind` | 3D | 1-8 | Flagship: procedurally generated floating archipelago (`src/procgen`), flight model, chase camera, shadows + procedural sky + post-processing + water, wind currents, rings, race with ghost, seeds, chunk streaming, mobile controls; see [`DRIFTWIND.md`](DRIFTWIND.md) | A/D bank, W/S pitch, Space boost, X brake, P photo, R race |
 | [Arena Blasters](../public/demos/arena-blasters/README.md) `arena-blasters` | 2D | 1-8 | Top-down shooter: `RigidBody2D` ships, trigger bullets, splitting asteroids, respawns, `ctx.engine.hud` scoreboard, particles, screen shake, procedural WAV sound | A/D turn, W thrust, J/click fire |
 | [Sky Hoppers](../public/demos/sky-hoppers/README.md) `sky-hoppers` | 2D | 1-4 | Co-op platformer: `Tilemap` + `TilemapCollider2D`, `CharacterController2D`, coins, spikes, moving platforms, shared checkpoints, goal flag, camera framing every player, parallax | A/D move, Space jump |
 | [Paddle Rush](../public/demos/paddle-rush/README.md) `paddle-rush` | 2D | 1-8 | Air hockey with an AI opponent and **shared control**: `multiUser.sharedControl`, `PlayerInput.coOwners`, `mergeStrategy: "average"` team paddles | WASD/arrows |
