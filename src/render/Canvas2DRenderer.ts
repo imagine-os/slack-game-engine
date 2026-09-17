@@ -4,7 +4,7 @@ import { Transform } from '../core/ecs/Transform';
 import type { Entity } from '../core/ecs/Entity';
 import type { Atlas, AtlasFrame } from '../assets/types';
 import { DebugDraw } from './DebugDraw';
-import { compareLayerOrder, type Renderer, type RendererHost, type RendererOptions, type RenderStats } from './Renderer';
+import { compareLayerOrder, createRenderStats, type Renderer, type RendererHost, type RendererOptions, type RenderStats } from './Renderer';
 import {
   type BlendMode, Camera2D, Light2D, ParticleEmitter, Shape, Sprite, Text, Tilemap,
 } from './components';
@@ -37,7 +37,7 @@ export class Canvas2DRenderer implements Renderer {
   readonly ctx: CanvasRenderingContext2D;
   readonly debug = new DebugDraw();
   readonly clearColor = new Color(0.08, 0.09, 0.12, 1);
-  readonly stats: RenderStats = { drawCalls: 0, primitives: 0, batches: 0 };
+  readonly stats: RenderStats = createRenderStats();
   pixelsPerUnit: number;
   pixelPerfect: boolean;
   hidpi: boolean;

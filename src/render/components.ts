@@ -351,42 +351,78 @@ export interface MaterialData {
   metallic: number;
   roughness: number;
   emissive: Color;
+  /** Multiplier for `emissive`; values above 1 glow through bloom. */
+  emissiveStrength: number;
   /** Image asset id for the base colour texture. */
   texture: string;
   unlit: boolean;
+  /** Apply camera/sky fog to unlit materials. */
+  unlitFog: boolean;
   wireframe: boolean;
   doubleSided: boolean;
   opacity: number;
+  /** Multiply the material colour by the mesh's per-vertex colours when it has any. */
+  vertexColors: boolean;
+  /** Shade with per-face normals computed from screen-space derivatives (low-poly look). */
+  flatShading: boolean;
+  /** Vertex sway amplitude (world units at unit height) driven by the renderer wind. 0 = rigid. */
+  windStrength: number;
+}
+
+/** Level-of-detail entry: use `mesh` once the camera is at least `distance` away. */
+export interface LodLevel {
+  mesh: string;
+  distance: number;
 }
 
 /** Renders a mesh (built-in primitive or GLTF mesh) with a material. */
-export class MeshRenderer extends Component {
+export class MeshRenderer extends Component implements MaterialData {
   static override readonly type = 'MeshRenderer';
-  /** `cube`, `sphere`, `plane`, `cylinder`, or `gltf:<assetId>[#meshIndex]`. */
+  /** `cube`, `sphere`, `plane`, `cylinder`, `cone`, a mesh registered with `renderer.addMesh`, or `gltf:<assetId>[#meshIndex]`. */
   mesh = 'cube';
   color = new Color(0.8, 0.8, 0.85, 1);
   metallic = 0;
   roughness = 0.6;
   emissive = new Color(0, 0, 0, 1);
+  emissiveStrength = 1;
   texture = '';
   unlit = false;
+  unlitFog = true;
   wireframe = false;
   doubleSided = false;
   opacity = 1;
   visible = true;
   /** Entities with the same mesh+material are drawn in one instanced call. */
   instanced = true;
+  vertexColors = true;
+  flatShading = false;
+  windStrength = 0;
+  /** Write into the directional shadow map. */
+  castShadow = true;
+  /** Sample the shadow map when lit. */
+  receiveShadow = true;
+  /** Skip drawing when the mesh bounds are outside the camera frustum. */
+  frustumCulled = true;
+  /**
+   * Optional LOD chain, sorted by ascending `distance`. `mesh` is used within
+   * the first distance; the last level whose distance is below the camera
+   * distance wins. Use an empty string to hide the mesh beyond a distance.
+   */
+  lods: LodLevel[] = [];
 }
 registerComponent(MeshRenderer, {
   category: 'Rendering 3D',
   description: 'Draws a 3D mesh.',
   icon: 'box',
   fields: {
-    mesh: { type: 'string', description: 'cube | sphere | plane | cylinder | gltf:<asset>#<index>' },
+    mesh: { type: 'string', description: 'cube | sphere | plane | cylinder | cone | <registered> | gltf:<asset>#<index>' },
     texture: { type: 'asset', assetKind: 'image' },
     metallic: { type: 'number', min: 0, max: 1, step: 0.01 },
     roughness: { type: 'number', min: 0, max: 1, step: 0.01 },
     opacity: { type: 'number', min: 0, max: 1, step: 0.01 },
+    emissiveStrength: { type: 'number', min: 0, max: 20, step: 0.1 },
+    windStrength: { type: 'number', min: 0, max: 2, step: 0.01 },
+    lods: { type: 'json', description: '[{ mesh, distance }]' },
   },
 });
 
@@ -402,10 +438,11 @@ export class Camera3D extends Component {
   active = true;
   priority = 0;
   clearColor = new Color(0.1, 0.11, 0.14, 1);
-  /** Sky gradient (drawn behind everything). */
+  /** Sky gradient (drawn behind everything) when no `SkySettings` component is present. */
   skyTop = new Color(0.25, 0.4, 0.7, 1);
   skyBottom = new Color(0.8, 0.85, 0.9, 1);
   skybox = true;
+  /** Linear distance fog (ignored when a `SkySettings` component provides atmospheric fog). */
   fogEnabled = false;
   fogColor = new Color(0.8, 0.85, 0.9, 1);
   fogNear = 20;
@@ -431,12 +468,208 @@ export class Light extends Component {
   /** Point light range in world units. */
   range = 10;
   enabled = true;
+  /** Directional only: render a shadow map from this light. */
+  castShadows = false;
+  /** Directional only: shadows cover the camera view up to this distance (world units). */
+  shadowDistance = 60;
+  /** Depth bias in world units (raise to fight acne, lower to fight peter-panning). */
+  shadowBias = 0.05;
+  /** Offset receivers along their normal, in shadow texels. */
+  shadowNormalBias = 1.5;
+  /** PCF kernel radius in texels (0 = hard shadows). */
+  shadowSoftness = 1;
 }
 registerComponent(Light, {
   category: 'Rendering 3D',
   description: 'Directional, point or ambient light.',
   icon: 'sun',
-  fields: { kind: { type: 'enum', options: ['directional', 'point', 'ambient'] }, intensity: { type: 'number', min: 0, max: 10, step: 0.05 } },
+  fields: {
+    kind: { type: 'enum', options: ['directional', 'point', 'ambient'] },
+    intensity: { type: 'number', min: 0, max: 10, step: 0.05 },
+    shadowDistance: { type: 'number', min: 1, max: 1000 },
+    shadowBias: { type: 'number', min: 0, max: 1, step: 0.005 },
+    shadowNormalBias: { type: 'number', min: 0, max: 10, step: 0.1 },
+    shadowSoftness: { type: 'number', min: 0, max: 4, step: 0.25 },
+  },
+});
+
+export type SkyMode = 'gradient' | 'procedural';
+
+/**
+ * Scene-wide sky and atmosphere. Add one to any entity: the renderer uses the
+ * first enabled instance. In `procedural` mode the sun position comes from
+ * `timeOfDay`, and with `driveLight` the directional light's colour and
+ * direction, the hemisphere ambient and the fog colour follow it.
+ */
+export class SkySettings extends Component {
+  static override readonly type = 'SkySettings';
+  enabled = true;
+  mode: SkyMode = 'procedural';
+  /** Hours, 0..24 (6 = sunrise, 12 = noon, 18 = sunset). */
+  timeOfDay = 17.5;
+  /** Compass heading of the sun at noon, degrees (0 = +Z, 90 = +X). */
+  sunAzimuth = 35;
+  /** Fraction of 90 degrees the sun reaches at noon. */
+  sunElevationScale = 0.8;
+  /** Haze: 0 = crisp, 1 = milky horizon. */
+  turbidity = 0.35;
+  /** Angular size of the sun disc, degrees. */
+  sunSize = 2.5;
+  /** Glow around the sun (0 = none). */
+  sunGlow = 1;
+  /** Stars at night (0 = none). */
+  stars = 1;
+  /** Cloud band coverage (0 = clear). */
+  clouds = 0.35;
+  cloudSpeed = 1;
+  cloudHeight = 0.35;
+  /** Overall brightness multiplier for sky colours. */
+  exposure = 1;
+  /** Tint applied to the computed sky palette (white = none). */
+  tint = new Color(1, 1, 1, 1);
+  /** Drive the directional light (direction, colour), ambient and fog from the sun. */
+  driveLight = true;
+  /** Directional light intensity at noon when `driveLight` is on. */
+  sunIntensity = 1.2;
+  /** Faint bluish fill from the moon at night. */
+  moonIntensity = 0.12;
+  /** Hemisphere ambient strength. */
+  ambientIntensity = 1;
+  /** Atmospheric fog (exponential distance + height). */
+  fogEnabled = true;
+  fogDensity = 0.012;
+  fogStart = 10;
+  /** Height above `fogHeight` at which fog thins (1/e per unit * falloff). */
+  fogHeightFalloff = 0.08;
+  fogHeight = 0;
+  /** Extra fog colour blend toward the sun colour when looking at it. */
+  fogSunBlend = 0.6;
+}
+registerComponent(SkySettings, {
+  category: 'Rendering 3D',
+  description: 'Procedural sky, sun, ambient and fog.',
+  icon: 'sun',
+  fields: {
+    mode: { type: 'enum', options: ['gradient', 'procedural'] },
+    timeOfDay: { type: 'number', min: 0, max: 24, step: 0.05 },
+    sunAzimuth: { type: 'number', min: -180, max: 180 },
+    sunElevationScale: { type: 'number', min: 0.1, max: 1, step: 0.01 },
+    turbidity: { type: 'number', min: 0, max: 1, step: 0.01 },
+    sunSize: { type: 'number', min: 0, max: 20, step: 0.1 },
+    sunGlow: { type: 'number', min: 0, max: 3, step: 0.05 },
+    stars: { type: 'number', min: 0, max: 2, step: 0.05 },
+    clouds: { type: 'number', min: 0, max: 1, step: 0.01 },
+    exposure: { type: 'number', min: 0, max: 4, step: 0.05 },
+    fogDensity: { type: 'number', min: 0, max: 0.2, step: 0.001 },
+    fogHeightFalloff: { type: 'number', min: 0, max: 2, step: 0.005 },
+  },
+});
+
+export type TonemapMode = 'none' | 'aces' | 'reinhard';
+
+/**
+ * Post-processing configuration. Add one to any entity to enable the HDR
+ * pipeline (bloom, tonemapping, grading, vignette, FXAA); the renderer copies
+ * the first enabled instance into `renderer.post` every frame.
+ */
+export class PostProcessSettings extends Component {
+  static override readonly type = 'PostProcessSettings';
+  enabled = true;
+  /** Render to a half-float target when the GPU supports it. */
+  hdr = true;
+  /** MSAA samples for the scene target (0/1 = off). */
+  msaa = 4;
+  bloom = true;
+  /** Scene luminance above which bloom starts. */
+  bloomThreshold = 1;
+  bloomSoftKnee = 0.5;
+  bloomIntensity = 0.5;
+  /** Blur spread multiplier. */
+  bloomRadius = 1;
+  exposure = 1;
+  tonemap: TonemapMode = 'aces';
+  saturation = 1.05;
+  contrast = 1.05;
+  /** Lift/gamma/gain grading (neutral: lift 0, gamma 1, gain 1). */
+  lift = new Color(0, 0, 0, 1);
+  gamma = new Color(1, 1, 1, 1);
+  gain = new Color(1, 1, 1, 1);
+  vignette = 0.3;
+  vignetteSmoothness = 0.6;
+  fxaa = true;
+  /** Radial colour fringing at the edges (0 = off, 1 = strong). */
+  chromaticAberration = 0.15;
+}
+registerComponent(PostProcessSettings, {
+  category: 'Rendering 3D',
+  description: 'Bloom, tonemapping, colour grading, vignette and FXAA.',
+  icon: 'sparkles',
+  fields: {
+    msaa: { type: 'integer', min: 0, max: 8 },
+    tonemap: { type: 'enum', options: ['none', 'aces', 'reinhard'] },
+    bloomThreshold: { type: 'number', min: 0, max: 5, step: 0.05 },
+    bloomSoftKnee: { type: 'number', min: 0, max: 1, step: 0.01 },
+    bloomIntensity: { type: 'number', min: 0, max: 3, step: 0.05 },
+    bloomRadius: { type: 'number', min: 0.25, max: 3, step: 0.05 },
+    exposure: { type: 'number', min: 0, max: 5, step: 0.05 },
+    saturation: { type: 'number', min: 0, max: 2, step: 0.01 },
+    contrast: { type: 'number', min: 0, max: 2, step: 0.01 },
+    vignette: { type: 'number', min: 0, max: 1, step: 0.01 },
+    vignetteSmoothness: { type: 'number', min: 0.01, max: 1, step: 0.01 },
+    chromaticAberration: { type: 'number', min: 0, max: 1, step: 0.01 },
+  },
+});
+
+/**
+ * Stylised water surface. Attach next to a `MeshRenderer` (typically a
+ * subdivided plane); the renderer then draws that mesh with the water shader:
+ * world-space sum-of-sines waves, two-tone colour by wave height, fresnel rim,
+ * sun glint and animated foam. Foam appears on wave crests, where the mesh's
+ * vertex colour red channel marks shore proximity, and where the undisplaced
+ * surface height is within `foamWidth` of `shorelineHeight`.
+ */
+export class WaterMaterial extends Component {
+  static override readonly type = 'WaterMaterial';
+  deepColor = new Color(0.05, 0.28, 0.45, 1);
+  shallowColor = new Color(0.2, 0.62, 0.7, 1);
+  foamColor = new Color(0.95, 0.98, 1, 1);
+  /** Vertical wave amplitude, world units. */
+  waveAmplitude = 0.18;
+  /** Wavelength of the largest wave, world units. */
+  waveLength = 6;
+  waveSpeed = 1;
+  /** Horizontal sharpening of crests (0 = pure sine). */
+  waveSteepness = 0.25;
+  /** Direction of the primary wave in the XZ plane, degrees. */
+  waveDirection = 20;
+  /** Terrain height at which foam bands appear (see class docs). */
+  shorelineHeight = 0;
+  foamWidth = 0.6;
+  /** Crest foam threshold (0..1 of amplitude; 1 = none). */
+  crestFoam = 0.75;
+  /** Reflection-like rim toward the horizon colour. */
+  fresnel = 0.6;
+  specular = 0.8;
+  opacity = 0.85;
+  flatShading = true;
+}
+registerComponent(WaterMaterial, {
+  category: 'Rendering 3D',
+  description: 'Animated stylised water for the sibling MeshRenderer.',
+  icon: 'waves',
+  requires: ['MeshRenderer'],
+  fields: {
+    waveAmplitude: { type: 'number', min: 0, max: 5, step: 0.01 },
+    waveLength: { type: 'number', min: 0.1, max: 200 },
+    waveSpeed: { type: 'number', min: 0, max: 10, step: 0.05 },
+    waveSteepness: { type: 'number', min: 0, max: 1, step: 0.01 },
+    waveDirection: { type: 'number', min: -180, max: 180 },
+    foamWidth: { type: 'number', min: 0, max: 10, step: 0.05 },
+    crestFoam: { type: 'number', min: 0, max: 1, step: 0.01 },
+    fresnel: { type: 'number', min: 0, max: 1, step: 0.01 },
+    specular: { type: 'number', min: 0, max: 3, step: 0.05 },
+    opacity: { type: 'number', min: 0, max: 1, step: 0.01 },
+  },
 });
 
 /** Helper: default orbit camera controller parameters (used by `OrbitController`). */

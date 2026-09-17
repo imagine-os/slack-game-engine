@@ -90,6 +90,19 @@ export function parseGLTF(json: GLTFJson, buffers: ArrayBuffer[]): GLTFAsset {
     }
   };
 
+  /** COLOR_0 as RGB floats (drops alpha, normalises integer types). */
+  const vertexColors = (acc: { array: Float32Array | Uint16Array | Uint32Array | Uint8Array; size: number }): Float32Array => {
+    const n = acc.array.length / acc.size;
+    const out = new Float32Array(n * 3);
+    const scale = acc.array instanceof Float32Array ? 1 : acc.array instanceof Uint8Array ? 1 / 255 : 1 / 65535;
+    for (let i = 0; i < n; i++) {
+      out[i * 3] = acc.array[i * acc.size] * scale;
+      out[i * 3 + 1] = acc.array[i * acc.size + 1] * scale;
+      out[i * 3 + 2] = acc.array[i * acc.size + 2] * scale;
+    }
+    return out;
+  };
+
   const meshes: GLTFMesh[] = (json.meshes ?? []).map((m, mi) => ({
     name: m.name ?? `mesh${mi}`,
     primitives: m.primitives
@@ -98,6 +111,7 @@ export function parseGLTF(json: GLTFJson, buffers: ArrayBuffer[]): GLTFAsset {
         const pos = accessor(p.attributes.POSITION).array as Float32Array;
         const normals = p.attributes.NORMAL !== undefined ? (accessor(p.attributes.NORMAL).array as Float32Array) : undefined;
         const uvs = p.attributes.TEXCOORD_0 !== undefined ? (accessor(p.attributes.TEXCOORD_0).array as Float32Array) : undefined;
+        const colors = p.attributes.COLOR_0 !== undefined ? vertexColors(accessor(p.attributes.COLOR_0)) : undefined;
         let indices: Uint16Array | Uint32Array;
         if (p.indices !== undefined) {
           const arr = accessor(p.indices).array;
@@ -114,6 +128,7 @@ export function parseGLTF(json: GLTFJson, buffers: ArrayBuffer[]): GLTFAsset {
           positions: pos,
           normals,
           uvs: uvF,
+          colors,
           indices,
           baseColor: bc ? [bc[0], bc[1], bc[2], bc[3] ?? 1] : undefined,
         };

@@ -61,13 +61,22 @@
                   "b": 0,
                   "a": 1
                 },
+                "emissiveStrength": 1,
                 "texture": "",
                 "unlit": false,
+                "unlitFog": true,
                 "wireframe": false,
                 "doubleSided": false,
                 "opacity": 1,
                 "visible": true,
-                "instanced": true
+                "instanced": true,
+                "vertexColors": true,
+                "flatShading": false,
+                "windStrength": 0,
+                "castShadow": true,
+                "receiveShadow": true,
+                "frustumCulled": true,
+                "lods": []
               }
             }
           ],
@@ -206,7 +215,12 @@
                 },
                 "intensity": 1.1,
                 "range": 10,
-                "enabled": true
+                "enabled": true,
+                "castShadows": false,
+                "shadowDistance": 60,
+                "shadowBias": 0.05,
+                "shadowNormalBias": 1.5,
+                "shadowSoftness": 1
               }
             }
           ],
@@ -254,7 +268,12 @@
                 },
                 "intensity": 0.3,
                 "range": 10,
-                "enabled": true
+                "enabled": true,
+                "castShadows": false,
+                "shadowDistance": 60,
+                "shadowBias": 0.05,
+                "shadowNormalBias": 1.5,
+                "shadowSoftness": 1
               }
             }
           ],
@@ -308,13 +327,22 @@
                   "b": 0,
                   "a": 1
                 },
+                "emissiveStrength": 1,
                 "texture": "",
                 "unlit": false,
+                "unlitFog": true,
                 "wireframe": false,
                 "doubleSided": false,
                 "opacity": 1,
                 "visible": true,
-                "instanced": true
+                "instanced": true,
+                "vertexColors": true,
+                "flatShading": false,
+                "windStrength": 0,
+                "castShadow": true,
+                "receiveShadow": true,
+                "frustumCulled": true,
+                "lods": []
               }
             }
           ],
