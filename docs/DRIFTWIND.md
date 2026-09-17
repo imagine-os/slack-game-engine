@@ -112,11 +112,15 @@ Default world in view: ~250–270 draw calls, ~1400 instances, ~110k triangles
 approaching a landmark (~200 draws / 80k triangles elsewhere, ~90 shadow
 draws, 10 post-process passes; measured with `renderer.stats` in the Playwright
 run). The sea plane, its discs, the waterfall ribbons, the lantern trails and
-the contrail puffs each add a single instanced draw. Decorations share meshes and identical materials so they
-instance; small props hide beyond 320 units and trees beyond 460 via
-`MeshRenderer.lods`; islands swap to a low-poly variant beyond `lodDistance`;
-chunks unload beyond `streamRadius`. `autoQuality` steps render scale, MSAA and
-FXAA down on slow GPUs.
+the contrail puffs each add a single instanced draw. Decorations share meshes
+and identical materials so they instance; small props hide beyond 320 units and
+trees beyond 460 via `MeshRenderer.lods`; islands swap to a low-poly variant
+beyond `lodDistance`; chunks unload beyond `streamRadius`. Chunks that come
+into range are queued nearest-first and spawned in `onUpdate` under a 6 ms
+budget (only the chunk under the player loads synchronously), so a seed change
+never stalls the main thread; that matters online, because the
+BroadcastChannel transport drops a member that misses heartbeats for 4 s.
+`autoQuality` steps render scale, MSAA and FXAA down on slow GPUs.
 
 ## Multiplayer
 
