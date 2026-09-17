@@ -88,7 +88,7 @@ defineScript({
       b.v.x *= k; b.v.y *= k; b.v.z *= k;
       b.t.position.x += b.v.x * dtc; b.t.position.y += b.v.y * dtc; b.t.position.z += b.v.z * dtc;
       b.t.markDirty();
-      b.t.updateWorldMatrix();
+      b.t.updateWorldMatrix(true);
       b.t.lookAt(s.look.set(p.x + b.v.x, p.y + b.v.y * 0.5, p.z + b.v.z));
       b.flap += dtc * b.flapRate * (1 + b.scare);
       const pose = Math.floor(b.flap) % 2;

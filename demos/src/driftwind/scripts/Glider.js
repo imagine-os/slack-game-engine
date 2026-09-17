@@ -27,6 +27,8 @@ defineScript({
     invertPitch: { type: 'boolean', default: false, label: 'Push forward to climb' },
   },
   onStart(ctx) {
+    this.ctxRef = ctx;
+    ctx.state.fwdTmp = { x: 0, y: 0, z: 0 };
     const s = ctx.state, p = ctx.props, t = ctx.transform;
     s.speed = p.cruise * 0.85; s.yaw = p.heading; s.pitch = 0; s.bank = 0; s.boost = 0.5; s.stallAmount = 0;
     s.drift = { x: 0, y: 0, z: 0 }; s.windTmp = { x: 0, y: 0, z: 0 }; s.windStrength = 0;
@@ -62,7 +64,13 @@ defineScript({
       const g = GROUPS[ctx.nameOf(child)];
       const mr = ctx.getOn(child, 'MeshRenderer');
       const group = desc.groups.find((x) => x.name === g);
-      if (mr && group) { mr.mesh = group.mesh; P.applyMaterial(mr, group); }
+      if (mr && group) {
+        mr.mesh = group.mesh;
+        P.applyMaterial(mr, group);
+        // The generated groups are modelled at full size in the glider's frame: drop the placeholder cube's offset and scale.
+        const ct = ctx.getOn(child, 'Transform');
+        if (ct) { ct.setPosition(0, 0, 0); ct.setScale(1, 1, 1); ct.rotation.set(0, 0, 0, 1); ct.markDirty(); }
+      }
     }
   },
   orient(ctx) {
@@ -74,8 +82,7 @@ defineScript({
     t.markDirty();
   },
   forward(s) {
-    const cp = Math.cos(s.pitch);
-    return { x: -Math.sin(s.yaw) * cp, y: Math.sin(s.pitch), z: -Math.cos(s.yaw) * cp };
+    return pg(this.ctxRef).flight.headingForward(s.yaw, s.pitch, s.fwdTmp);
   },
   teleport(ctx, position, yaw) {
     const s = ctx.state;
@@ -87,7 +94,7 @@ defineScript({
 
   onMessage(ctx, name, data) {
     const s = ctx.state;
-    if (name === 'takeControl') { if (data.peer === ctx.net.owner()) s.flying = true; }
+    if (name === 'takeControl') { if (data.peer === ctx.net.owner()) { s.flying = true; s.hudCleared = false; } }
     else if (name === 'resetTo') { if (!data.peer || data.peer === ctx.net.owner()) this.teleport(ctx, data.position, data.yaw); }
     else if (name === 'raceState') {
       if (data.phase === 'running') { s.racing = true; s.finished = false; s.raceGate = 0; s.raceStart = data.startAt; s.ghostPath = []; s.ghostTimer = 0; }
@@ -106,6 +113,9 @@ defineScript({
 
   onOwnerInput(ctx, snap, dt) {
     const s = ctx.state, p = ctx.props, t = ctx.transform, M = ctx.math;
+    const P = pg(ctx);
+    if (!P) return;
+    const FL = P.flight;
     const W = world(ctx);
     let steer = 0, pitchIn = 0, boosting = false, braking = false;
     if (s.flying) {
@@ -120,7 +130,7 @@ defineScript({
     }
     // Bank and turn (banking turns; slower at high speed like a real wing).
     s.bank = M.damp(s.bank, M.clamp(steer, -1, 1) * p.maxBank, 3.2, dt);
-    s.yaw -= Math.sin(s.bank) * p.turnRate * dt * M.clamp(p.cruise / Math.max(s.speed, 8), 0.55, 1.6);
+    s.yaw += FL.bankTurnRate(s.bank, p.turnRate, s.speed, p.cruise) * dt;
     // Pitch with reduced authority near the stall, natural nose-down tendency.
     const authority = M.clamp((s.speed - p.stall * 0.6) / (p.cruise - p.stall * 0.6), 0.15, 1);
     s.pitch += pitchIn * p.pitchRate * authority * dt;
@@ -129,14 +139,12 @@ defineScript({
     else s.stallAmount = Math.max(0, s.stallAmount - dt * 2);
     s.pitch = M.clamp(s.pitch, -1.2, 0.95);
     // Speed: gravity along the flight path, aero drag/lift settling toward cruise, boost and brake.
-    s.speed += -9.8 * 1.2 * Math.sin(s.pitch) * dt;
-    s.speed += (p.cruise - s.speed) * 0.32 * dt;
     const boostOn = boosting && s.boost > 0.001;
-    if (boostOn) { s.speed += p.boostAccel * dt; s.boost = Math.max(0, s.boost - dt * 0.42); if (!s.wasBoosting && this.isLocal(ctx)) ctx.audio.play('whoosh', { volume: 0.5 }); }
+    if (boostOn) { s.boost = Math.max(0, s.boost - dt * 0.42); if (!s.wasBoosting && this.isLocal(ctx)) ctx.audio.play('whoosh', { volume: 0.5 }); }
     else s.boost = Math.min(1, s.boost + dt * 0.03);
     s.wasBoosting = boostOn;
-    if (braking) { s.speed += (p.stall * 1.15 - s.speed) * 1.8 * dt; s.pitch += 0.35 * authority * dt; }
-    s.speed = M.clamp(s.speed, 5, p.maxSpeed);
+    s.speed = FL.integrateSpeed(s.speed, s.pitch, dt, { cruise: p.cruise, stall: p.stall, maxSpeed: p.maxSpeed, boostAccel: p.boostAccel, boosting: boostOn, braking });
+    if (braking) s.pitch += 0.35 * authority * dt;
     // Wind currents push the glider along and refill the boost meter.
     let wind = s.windTmp;
     if (W) W.windAt(t.position, wind); else { wind.x = wind.y = wind.z = 0; }
@@ -165,16 +173,9 @@ defineScript({
       if (hit) {
         t.position.x += hit.push.x; t.position.y += hit.push.y; t.position.z += hit.push.z;
         const n = hit.normal;
-        const vdn = vx * n.x + vy * n.y + vz * n.z;
-        if (vdn < 0) {
-          const rx = vx - 2 * vdn * n.x, ry = vy - 2 * vdn * n.y, rz = vz - 2 * vdn * n.z;
-          const rl = Math.hypot(rx, ry, rz) || 1;
-          // Blend the reflected direction with the current heading so it feels like a bounce, not a ricochet.
-          const bx = f.x * 0.45 + (rx / rl) * 0.55, by = f.y * 0.45 + (ry / rl) * 0.55, bz = f.z * 0.45 + (rz / rl) * 0.55;
-          const bl = Math.hypot(bx, by, bz) || 1;
-          s.yaw = Math.atan2(-bx, -bz);
-          s.pitch = M.clamp(Math.asin(M.clamp(by / bl, -1, 1)), -0.7, 0.7);
-        }
+        // Blend the reflected direction with the current heading so it feels like a bounce, not a ricochet.
+        const bounce = FL.bounceHeading(s.vel, f, n);
+        if (bounce) { s.yaw = bounce.yaw; s.pitch = bounce.pitch; }
         const strength = M.clamp(s.speed / p.maxSpeed, 0.2, 1);
         s.speed = Math.max(p.stall * 0.95, s.speed * 0.5);
         s.drift.x += n.x * 5; s.drift.y += n.y * 5; s.drift.z += n.z * 5;
@@ -190,21 +191,14 @@ defineScript({
 
   /** Segment test against every gate ring: did we fly through it this step? */
   checkGates(ctx, W, a, b) {
-    const s = ctx.state;
+    const s = ctx.state, FL = pg(ctx).flight;
     for (const ring of W.rings) {
       const c = ring.position;
       const dx = b.x - c.x, dz = b.z - c.z;
       if (dx * dx + dz * dz > 900) continue;
-      const nx = -Math.sin(ring.yaw), nz = -Math.cos(ring.yaw);
-      const d0 = (a.x - c.x) * nx + (a.z - c.z) * nz, d1 = (b.x - c.x) * nx + (b.z - c.z) * nz;
-      if (d0 * d1 > 0 || d0 === d1) continue;
-      const k = d0 / (d0 - d1);
-      const px = a.x + (b.x - a.x) * k - c.x, py = a.y + (b.y - a.y) * k - c.y, pz = a.z + (b.z - a.z) * k - c.z;
-      // Distance from the ring axis inside the gate plane.
-      const along = px * nx + pz * nz;
-      const rx = px - nx * along, rz = pz - nz * along;
-      if (Math.hypot(rx, py, rz) > ring.radius * 0.95) continue;
-      const forwardPass = d0 < 0 && d1 >= 0;
+      const cross = FL.gateCrossing(a, b, ring);
+      if (!cross) continue;
+      const forwardPass = cross.forward;
       const now = ctx.time.elapsed;
       if (s.racing && !s.finished) {
         if (ring.index !== s.raceGate || !forwardPass) continue;
@@ -238,7 +232,7 @@ defineScript({
     s.rx = t.x; s.ry = t.y; s.rz = t.z;
     const W = world(ctx);
     if (s.windLoop) s.windLoop.setVolume(ctx.math.clamp(0.08 + s.renderSpeed / 90, 0, 0.75) * (s.flying ? 1 : 0.5));
-    if (W) this.collectAround(ctx, W);
+    if (W && s.flying) this.collectAround(ctx, W);
     if (s.racing && !s.finished) {
       s.ghostTimer += dt;
       if (s.ghostTimer >= 0.1) {
@@ -247,7 +241,10 @@ defineScript({
         s.ghostPath.push([+t.x.toFixed(2), +t.y.toFixed(2), +t.z.toFixed(2), +q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3), +q.w.toFixed(3)]);
       }
     }
-    if (ctx.time.frame % 4 === 0) this.drawHud(ctx);
+    if (ctx.time.frame % 4 === 0) {
+      if (s.flying) this.drawHud(ctx);
+      else if (!s.hudCleared) { s.hudCleared = true; const h = hud(ctx); if (h) for (const id of ['speed', 'alt', 'boostbg', 'boostbar', 'stall', 'flight-mode']) h.remove(id); }
+    }
   },
 
   /** Motes and island discovery are local flavour: only the local player's own glider collects. */

@@ -4,6 +4,9 @@
 // player. Also animates lanterns, motes, turbine blades and wind streaks.
 function pg(ctx) { return ctx.engine.procgen || null; }
 
+const SMALL_PROPS = new Set(['rock', 'crystal', 'stone-lantern', 'lantern', 'windsock', 'column', 'mote']);
+function rgba(c) { return { r: c.r, g: c.g, b: c.b, a: 1 }; }
+
 defineScript({
   name: 'WorldStreamer',
   description: 'Generates and streams the procedural archipelago for a seed.',
@@ -50,6 +53,15 @@ defineScript({
         s.streaks.push({ entity: e, t: ctx.getOn(e, 'Transform'), wind, s: (k / n) * length, length, off, speed: wind.strength * 0.9 });
       }
     }
+    this.spawnSea(ctx);
+    // Global wind for foliage sway follows the first wind current's heading.
+    const r = ctx.engine.renderer;
+    if (r && r.wind && W.winds.length) {
+      const w0 = W.winds[0].points, a = w0[0], b = w0[Math.min(3, w0.length - 1)];
+      const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1;
+      r.wind.direction.set(dx / l, 0, dz / l);
+      r.wind.strength = 1;
+    }
     s.ready = true;
     this.stream(ctx);
   },
@@ -61,9 +73,15 @@ defineScript({
     return P.registered(name) || P.registerGenerated(name, s.world.library(key));
   },
 
-  /** Entity with one MeshRenderer per colour group (or one coloured mesh when the renderer supports vertex colours). */
-  spawnObject(ctx, name, desc, position, yaw, scale, tag, parent) {
-    const w = ctx.world, P = pg(ctx);
+  /**
+   * Entity for a generated object. On a vertex-colour renderer the plain lit
+   * groups share one merged mesh (`desc.base`) and only emissive, transparent,
+   * wind or water groups get their own child; otherwise one child per colour
+   * group carries the palette colour. `opts.hideAt` hides the object beyond a
+   * distance through `MeshRenderer.lods`; `opts.castShadow` overrides shadows.
+   */
+  spawnObject(ctx, name, desc, position, yaw, scale, tag, parent, opts) {
+    const w = ctx.world, P = pg(ctx), F = P.features;
     const e = w.createEntity(name);
     const t = w.getComponent(e, 'Transform');
     t.setPosition(position.x, position.y, position.z);
@@ -71,19 +89,65 @@ defineScript({
     t.setScale(scale, scale, scale);
     if (tag) w.addComponentByType(e, 'Tag', { tags: [tag] });
     if (parent !== undefined) w.setParent(e, parent);
-    if (P.features.vertexColors) {
-      const mr = w.addComponentByType(e, 'MeshRenderer', { mesh: desc.mesh });
-      mr.color.set(1, 1, 1, 1);
-      if ('flatShading' in mr) mr.flatShading = true;
-    } else {
-      for (const g of desc.groups) {
-        const c = w.createEntity(g.name);
-        w.setParent(c, e);
-        const mr = w.addComponentByType(c, 'MeshRenderer', { mesh: g.mesh });
-        P.applyMaterial(mr, g);
+    const parts = F.vertexColors && desc.base ? [desc.base].concat(desc.special) : desc.groups;
+    for (const g of parts) {
+      const c = w.createEntity(g.name);
+      w.setParent(c, e);
+      const mr = w.addComponentByType(c, 'MeshRenderer', { mesh: g.mesh });
+      P.applyMaterial(mr, g);
+      if (opts && opts.castShadow !== undefined && F.shadows) mr.castShadow = opts.castShadow;
+      if (opts && opts.hideAt && F.lods) mr.lods = [{ mesh: '', distance: opts.hideAt / Math.max(0.05, scale) }];
+      if (g.water && F.water) {
+        // Ponds on islands: the stylised water material replaces the flat colour.
+        const pal = P.palettes.PALETTES[(opts && opts.biome) || this.biomeOf(ctx, position)];
+        mr.castShadow = false;
+        w.addComponentByType(c, 'WaterMaterial', {
+          deepColor: rgba(P.builder.shade(pal.water, 0.7)), shallowColor: rgba(pal.water), foamColor: rgba(pal.foam),
+          waveAmplitude: 0.03, waveLength: 1.6, waveSpeed: 0.5, waveSteepness: 0.1, crestFoam: 0.9, fresnel: 0.35, specular: 0.7, opacity: 0.9, flatShading: true,
+        });
       }
     }
     return e;
+  },
+
+  biomeOf(ctx, position) {
+    const W = ctx.state.world;
+    const hit = W && W.nearestIsland(position);
+    return hit ? hit.island.biome : (W ? W.primaryBiome : 'meadow');
+  },
+
+  /** The sea: a large water plane far below the islands that follows the player (waves are world-space, so moving it is seamless). */
+  spawnSea(ctx) {
+    const s = ctx.state, P = pg(ctx), W = s.world;
+    if (!P.features.water || !P.features.vertexColors) return;
+    const name = `${s.prefix}sea`;
+    if (!P.registered(name)) {
+      const n = 64, size = 7000, pos = [], nrm = [], col = [], idx = [];
+      for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+        pos.push((i / n - 0.5) * size, 0, (j / n - 0.5) * size); nrm.push(0, 1, 0); col.push(0, 0, 0);
+      }
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const a = j * (n + 1) + i, b = a + n + 1;
+        if ((i + j) % 2 === 0) idx.push(a, b, a + 1, b, b + 1, a + 1); else idx.push(a, b, b + 1, a, b + 1, a + 1);
+      }
+      const positions = new Float32Array(pos);
+      const mesh = { positions, normals: new Float32Array(nrm), colors: new Float32Array(col), indices: new Uint16Array(idx), bounds: P.builder.meshBounds(positions) };
+      P.registerGenerated(name, { mesh, groups: [{ name: 'sea', color: { r: 1, g: 1, b: 1 }, data: mesh, triangles: idx.length / 3, water: true }] });
+    }
+    const pal = P.palettes.PALETTES[W.primaryBiome];
+    const e = ctx.world.createEntity('Sea');
+    s.seaY = W.bounds.minY - 320;
+    const t = ctx.getOn(e, 'Transform');
+    t.setPosition(0, s.seaY, 0);
+    const mr = ctx.world.addComponentByType(e, 'MeshRenderer', { mesh: name, castShadow: false, frustumCulled: false });
+    mr.color.set(1, 1, 1, 1);
+    ctx.world.addComponentByType(e, 'WaterMaterial', {
+      // crestFoam is a height threshold (0..1): keep it high so only the tallest crests break.
+      // Albedo is multiplied by the (orange) golden-hour light, so keep the water bright and saturated to stay teal.
+      deepColor: rgba(P.builder.mixRGB(P.builder.rgb('#0e5a86'), pal.water, 0.3)), shallowColor: rgba(P.builder.mixRGB(P.builder.rgb('#35b6d6'), pal.water, 0.35)), foamColor: rgba(pal.foam),
+      waveAmplitude: 0.5, waveLength: 30, waveSpeed: 0.45, waveSteepness: 0.15, crestFoam: 0.93, fresnel: 0.35, specular: 0.7, opacity: 1, flatShading: false,
+    });
+    s.sea = { entity: e, t };
   },
 
   focus(ctx) {
@@ -103,6 +167,7 @@ defineScript({
     const { entered, exited } = s.tracker.update(pos, ctx.props.streamRadius);
     for (const key of exited) this.unloadChunk(ctx, key);
     for (const key of entered) this.loadChunk(ctx, key);
+    if (s.sea) s.sea.t.setPosition(Math.round(pos.x / 100) * 100, s.seaY, Math.round(pos.z / 100) * 100);
     const lodD2 = ctx.props.lodDistance * ctx.props.lodDistance;
     for (const isl of s.islandLods) {
       const dx = isl.position.x - pos.x, dz = isl.position.z - pos.z;
@@ -122,7 +187,7 @@ defineScript({
     s.loaded[key] = chunk;
     for (const isl of content.islands) this.spawnIsland(ctx, isl, chunk);
     for (const cloud of content.clouds) {
-      const e = this.spawnObject(ctx, `Cloud ${cloud.id}`, this.reg(ctx, cloud.key), cloud.position, cloud.yaw, cloud.scale, 'cloud');
+      const e = this.spawnObject(ctx, `Cloud ${cloud.id}`, this.reg(ctx, cloud.key), cloud.position, cloud.yaw, cloud.scale, 'cloud', undefined, { castShadow: false });
       chunk.entities.push(e);
       const rec = { kind: 'drift', t: ctx.getOn(e, 'Transform'), base: cloud.position, speed: cloud.drift, phase: cloud.id };
       chunk.anim.push(rec); s.anim.push(rec);
@@ -140,18 +205,19 @@ defineScript({
     const detail = W.islandDetail(spec.id);
     const hiDesc = P.registered(`${s.prefix}island-${spec.id}`) || P.registerGenerated(`${s.prefix}island-${spec.id}`, detail.island);
     const loDesc = P.registered(`${s.prefix}island-${spec.id}-lod`) || P.registerGenerated(`${s.prefix}island-${spec.id}-lod`, detail.lod);
-    const root = this.spawnObject(ctx, spec.name, hiDesc, spec.position, 0, 1, 'island');
+    const root = this.spawnObject(ctx, spec.name, hiDesc, spec.position, 0, 1, 'island', undefined, { biome: spec.biome });
     ctx.world.addComponentByType(root, 'Script', { script: 'Island', props: { id: spec.id, name: spec.name, biome: spec.biome, radius: spec.radius } });
     const hi = [], lo = [];
     for (const c of ctx.world.getChildren(root)) { const mr = ctx.getOn(c, 'MeshRenderer'); if (mr) hi.push(mr); }
-    const lodRoot = this.spawnObject(ctx, `${spec.name} (far)`, loDesc, spec.position, 0, 1, null);
+    const lodRoot = this.spawnObject(ctx, `${spec.name} (far)`, loDesc, spec.position, 0, 1, null, undefined, { biome: spec.biome });
     for (const c of ctx.world.getChildren(lodRoot)) { const mr = ctx.getOn(c, 'MeshRenderer'); if (mr) { mr.visible = false; lo.push(mr); } }
     const lod = { position: spec.position, hi, lo, far: false };
     chunk.entities.push(root, lodRoot);
     chunk.lods.push(lod); s.islandLods.push(lod);
     if (ctx.props.detail) {
       for (const d of detail.decorations) {
-        const e = this.spawnObject(ctx, d.kind, this.reg(ctx, d.key), d.position, d.yaw, d.scale, null);
+        const small = SMALL_PROPS.has(d.kind);
+        const e = this.spawnObject(ctx, d.kind, this.reg(ctx, d.key), d.position, d.yaw, d.scale, null, undefined, { hideAt: small ? 320 : 460, castShadow: small ? false : undefined });
         chunk.entities.push(e);
         if (d.animate && d.animate !== 'sway') {
           const rec = { kind: d.animate, t: ctx.getOn(e, 'Transform'), base: d.position, yaw: d.yaw, phase: d.position.x * 0.37 + d.position.z * 0.11, speed: d.kind === 'turbine-blades' ? 1.6 : 1 };
@@ -160,7 +226,7 @@ defineScript({
       }
       const moteDesc = this.reg(ctx, 'mote');
       for (const m of detail.motes) {
-        const e = this.spawnObject(ctx, 'Mote', moteDesc, m, 0, 1, 'mote');
+        const e = this.spawnObject(ctx, 'Mote', moteDesc, m, 0, 1, 'mote', undefined, { hideAt: 260, castShadow: false });
         chunk.entities.push(e);
         const rec = { kind: 'mote', t: ctx.getOn(e, 'Transform'), base: m, phase: m.x * 0.5 + m.y, speed: 1 };
         chunk.anim.push(rec); s.anim.push(rec);
@@ -188,6 +254,8 @@ defineScript({
     const s = ctx.state;
     if (s.loaded) for (const key of Object.keys(s.loaded)) this.unloadChunk(ctx, key);
     if (s.streaks) for (const st of s.streaks) if (ctx.world.isAlive(st.entity)) ctx.destroy(st.entity);
+    if (s.sea && ctx.world.isAlive(s.sea.entity)) ctx.destroy(s.sea.entity);
+    s.sea = null;
     s.loaded = {}; s.anim = []; s.streaks = []; s.islandLods = [];
     if (s.tracker) s.tracker.clear();
   },
@@ -221,7 +289,7 @@ defineScript({
       const p = pointOn(st.wind.points, st.s);
       st.t.setPosition(p.x + st.off.x, p.y + st.off.y, p.z + st.off.z);
       const q = pointOn(st.wind.points, Math.min(st.length, st.s + 2));
-      st.t.updateWorldMatrix();
+      st.t.updateWorldMatrix(true);
       st.t.lookAt(new ctx.math.Vec3(q.x + st.off.x, q.y + st.off.y, q.z + st.off.z));
     }
   },

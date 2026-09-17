@@ -25,6 +25,12 @@ export interface ProjectSettings {
   touchControls: boolean;
   /** Names of touch buttons (become `Touch:<name>` bindings). */
   touchButtons: string[];
+  /**
+   * Optional renderer options passed to `Engine.create` (`RendererOptions`):
+   * 3D quality knobs such as `autoQuality`, `shadows`, `shadowMapSize`,
+   * `renderScale`. Absent in older projects.
+   */
+  render?: { autoQuality?: boolean; shadows?: boolean; shadowMapSize?: number; renderScale?: number };
 }
 
 /** Full project document as stored/exported. */

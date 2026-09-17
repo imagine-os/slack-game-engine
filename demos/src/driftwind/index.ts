@@ -12,13 +12,29 @@ export function build(): DemoBundle {
   const b = new SceneBuilder();
   b.entity('Camera', {
     Transform: { position: { x: 60, y: 70, z: 60 } },
-    Camera3D: { fov: 62, near: 0.3, far: 1400, fogEnabled: true, fogNear: 140, fogFar: 520, fogColor: hex('#f3d2b0'), skyTop: hex('#5a6fd0'), skyBottom: hex('#ffcf8a'), clearColor: hex('#f3d2b0') },
+    Camera3D: { fov: 62, near: 0.3, far: 3200, fogEnabled: true, fogNear: 140, fogFar: 520, fogColor: hex('#f3d2b0'), skyTop: hex('#5a6fd0'), skyBottom: hex('#ffcf8a'), clearColor: hex('#f3d2b0') },
     Script: { script: 'ChaseCamera', props: {} },
     AudioListener: {},
   });
-  b.entity('Sun', { Transform: { position: { x: 120, y: 60, z: -80 }, rotation: euler(-0.5, 0.9, 0) }, Light: { kind: 'directional', intensity: 1.2, color: hex('#ffe2b0') } });
-  b.entity('Ambient', { Transform: {}, Light: { kind: 'ambient', intensity: 0.42, color: hex('#c0b0ff') } });
-  b.entity('Sky', { Transform: {}, Script: { script: 'Sky', props: { startTime: 0.71, dayLength: 720 } } });
+  // The sun follows SkySettings (driveLight); the Transform only matters for the legacy path. Shadows reach ~110 units.
+  b.entity('Sun', {
+    Transform: { position: { x: 120, y: 60, z: -80 }, rotation: euler(-0.5, 0.9, 0) },
+    Light: { kind: 'directional', intensity: 1.15, color: hex('#ffe2b0'), castShadows: true, shadowDistance: 110, shadowBias: 0.08, shadowNormalBias: 1.6, shadowSoftness: 1.2 },
+  });
+  // A whisper of extra ambient on top of the sky's hemisphere light so shadowed cliffs keep their colour.
+  b.entity('Ambient', { Transform: {}, Light: { kind: 'ambient', intensity: 0.12, color: hex('#c0b0ff') } });
+  b.entity('Sky', {
+    Transform: {},
+    SkySettings: {
+      mode: 'procedural', timeOfDay: 17.5, sunAzimuth: 35, sunElevationScale: 0.8, turbidity: 0.42, sunSize: 2.8, sunGlow: 1.15, clouds: 0.3, cloudSpeed: 0.6, stars: 1,
+      sunIntensity: 1.25, ambientIntensity: 1.05, fogEnabled: true, fogDensity: 0.0011, fogStart: 90, fogHeightFalloff: 0.006, fogHeight: -360, fogSunBlend: 0.45,
+    },
+    PostProcessSettings: {
+      enabled: true, hdr: true, msaa: 4, bloom: true, bloomThreshold: 1, bloomSoftKnee: 0.5, bloomIntensity: 0.38, bloomRadius: 1.1,
+      exposure: 1.02, tonemap: 'aces', saturation: 1.1, contrast: 1.05, vignette: 0.3, vignetteSmoothness: 0.6, fxaa: true, chromaticAberration: 0.1,
+    },
+    Script: { script: 'Sky', props: { hour: 17.5, driftHours: 0.55, driftPeriod: 540 } },
+  });
   b.entity('World', { Transform: {}, Script: { script: 'WorldStreamer', props: { seed: DEFAULT_SEED, streamRadius: 520, lodDistance: 260, islands: 34, detail: true } } });
   b.entity('GameManager', {
     Transform: {},
@@ -65,6 +81,8 @@ export function build(): DemoBundle {
       { id: 'pad', kind: 'audio', url: 'assets/pad.wav' },
     ],
     settings: {
+      // The quality ladder steps render scale, shadow resolution, MSAA and bloom down on slow GPUs and back up when frame time allows.
+      render: { autoQuality: true, shadows: true, shadowMapSize: 2048 },
       network: { mode: 'host-authoritative', maxPlayers: 8, tickRate: 20 },
       physics: { gravity3d: { x: 0, y: 0, z: 0 } },
       input: {

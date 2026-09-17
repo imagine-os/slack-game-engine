@@ -21,6 +21,7 @@ defineScript({
     s.look = new ctx.math.Vec3(); s.tmp = new ctx.math.Vec3(); s.fwd = new ctx.math.Vec3(); s.up = new ctx.math.Vec3();
     s.streakRng = new ctx.math.Random(4242);
     s.cinema = 0;
+    s.started = ctx.net.online && !ctx.net.isHost; // guests join a flight already in progress
   },
   ensureStreaks(ctx) {
     const s = ctx.state, P = pg(ctx);
@@ -41,7 +42,13 @@ defineScript({
   },
   onDestroy(ctx) { for (const st of ctx.state.streaks || []) if (ctx.world.isAlive(st.e)) ctx.destroy(st.e); },
   onMessage(ctx, name, data) {
-    if (name === 'collision' && (data.peer === ctx.net.localId || data.peer === 'local')) ctx.state.shake = Math.max(ctx.state.shake, 0.4 + data.strength * 0.8);
+    const s = ctx.state;
+    if (name === 'collision' && (data.peer === ctx.net.localId || data.peer === 'local')) {
+      const r = ctx.engine.renderer;
+      if (r && typeof r.setCameraShake === 'function') r.setCameraShake(0.15 + data.strength * 0.35, 4);
+      else ctx.state.shake = Math.max(ctx.state.shake, 0.4 + data.strength * 0.8);
+    }
+    if (name === 'shell:fly' || name === 'shell:race' || name === 'takeControl') s.started = true;
     if (name === 'worldSeed') { for (const st of ctx.state.streaks) if (ctx.world.isAlive(st.e)) ctx.destroy(st.e); ctx.state.streaks = []; }
   },
   localGlider(ctx) {
@@ -56,19 +63,19 @@ defineScript({
     const cam = ctx.get('Camera3D');
     if (ctx.input.keyboard.pressed('KeyP') || ctx.input.pressed('photo')) { s.photo = !s.photo; ctx.send('photoMode', { on: s.photo }); }
     const glider = this.localGlider(ctx);
-    if (glider === undefined) { this.cinematic(ctx, dt); return; }
+    if (glider === undefined || !s.started) { this.cinematic(ctx, dt); return; }
     const gt = ctx.getOn(glider, 'Transform');
     const gp = gt.position;
     if (s.prev && dt > 0) s.speed = M.damp(s.speed, Math.min(200, Math.hypot(gp.x - s.prev.x, gp.y - s.prev.y, gp.z - s.prev.z) / dt), 5, dt);
     s.prev = { x: gp.x, y: gp.y, z: gp.z };
-    gt.updateWorldMatrix();
+    gt.updateWorldMatrix(true);
     gt.forward(s.fwd);
     s.shake = Math.max(0, s.shake - dt * 1.8);
     if (s.photo) {
       s.orbit += dt * 0.22;
       const r = 8 + Math.sin(s.orbit * 0.5) * 2, h = 2 + Math.sin(s.orbit * 0.31) * 1.5;
       t.setPosition(gp.x + Math.cos(s.orbit) * r, gp.y + h, gp.z + Math.sin(s.orbit) * r);
-      t.updateWorldMatrix();
+      t.updateWorldMatrix(true);
       t.lookAt(s.look.set(gp.x, gp.y, gp.z));
       if (cam) cam.fov = M.damp(cam.fov, 45, 2, dt);
       this.streaks(ctx, dt, gp, 0);
@@ -83,7 +90,7 @@ defineScript({
     const nx = M.damp(t.x, tx, k, dt), ny = M.damp(t.y, ty, k * 0.8, dt), nz = M.damp(t.z, tz, k, dt);
     const sh = s.shake * s.shake * 0.5;
     t.setPosition(nx + (Math.random() - 0.5) * sh, ny + (Math.random() - 0.5) * sh, nz + (Math.random() - 0.5) * sh);
-    t.updateWorldMatrix();
+    t.updateWorldMatrix(true);
     s.look.set(gp.x + s.fwd.x * ctx.props.lookAhead, gp.y + s.fwd.y * ctx.props.lookAhead * 0.6 + 0.6, gp.z + s.fwd.z * ctx.props.lookAhead);
     t.lookAt(s.look);
     if (cam) cam.fov = M.damp(cam.fov, ctx.props.fov + s.speed * ctx.props.fovPerSpeed, 3, dt);
@@ -98,12 +105,12 @@ defineScript({
     s.cinema += dt;
     const W = P && P.world;
     const sp = W ? W.spawn(0).position : { x: 0, y: 50, z: 0 };
-    const a = s.cinema * 0.08;
-    t.setPosition(sp.x + Math.cos(a) * 60, sp.y + 14 + Math.sin(a * 0.7) * 4, sp.z + Math.sin(a) * 60);
-    t.updateWorldMatrix();
-    t.lookAt(s.look.set(sp.x, sp.y - 6, sp.z));
+    const a = s.cinema * 0.06 + 2.2;
+    t.setPosition(sp.x + Math.cos(a) * 95, sp.y + 22 + Math.sin(a * 0.7) * 5, sp.z + Math.sin(a) * 95);
+    t.updateWorldMatrix(true);
+    t.lookAt(s.look.set(sp.x, sp.y - 10, sp.z));
     const cam = ctx.get('Camera3D');
-    if (cam) cam.fov = 55;
+    if (cam) cam.fov = 58;
   },
   /** Speed streaks: thin translucent lines rushing past the camera, more with speed and inside wind. */
   streaks(ctx, dt, gp, intensity) {
@@ -128,7 +135,7 @@ defineScript({
       const rx = -s.fwd.z, rz = s.fwd.x;
       st.t.setPosition(gp.x + s.fwd.x * st.off.z + rx * st.off.x, gp.y + st.off.y + s.fwd.y * st.off.z, gp.z + s.fwd.z * st.off.z + rz * st.off.x);
       st.t.setScale(1, 1, 1 + speed / 25);
-      st.t.updateWorldMatrix();
+      st.t.updateWorldMatrix(true);
       st.t.lookAt(s.look.set(st.t.x + s.fwd.x, st.t.y + s.fwd.y, st.t.z + s.fwd.z));
       st.mr.opacity = 0.08 + Math.min(0.35, intensity * 0.3) * Math.sin(st.life * Math.PI);
     }

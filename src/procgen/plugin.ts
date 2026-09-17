@@ -12,6 +12,7 @@ import * as builder from './MeshBuilder';
 import * as noise from './noise';
 import * as palettes from './palettes';
 import * as seeds from './seed';
+import * as flight from './flight';
 import { generateIsland } from './island';
 import { generateTree } from './tree';
 import { generateCrystal, generateRock } from './rock';
@@ -36,22 +37,43 @@ export interface RegisteredMesh {
   /** Merged mesh with vertex colours (draw with a white material when the renderer supports colours). */
   mesh: string;
   groups: RegisteredGroup[];
+  /**
+   * Plain lit groups merged into one vertex-coloured mesh (`<name>/base`), or
+   * undefined when every group needs its own material. With `special` this
+   * is the cheapest way to draw the object on a vertex-colour renderer.
+   */
+  base?: RegisteredGroup;
+  /** Groups that need their own material (emissive, transparent, unlit, wind, water, double-sided). */
+  special: RegisteredGroup[];
   bounds: builder.Bounds;
   triangles: number;
 }
 
-/** Renderer capabilities detected at install time (all false headless). */
+/**
+ * Renderer capabilities detected at install time from the component registry
+ * and the renderer instance. Headless engines (tests) report everything that
+ * the registered components support, so scenes are built identically; only
+ * `renderer` (a live WebGL renderer) is false there.
+ */
 export interface RendererFeatures {
-  /** `MeshData.colors` are honoured. */
+  /** `MeshData.colors` are honoured (`MeshRenderer.vertexColors`). */
   vertexColors: boolean;
-  /** `renderer.sky` with `timeOfDay`. */
+  /** A `SkySettings` component drives the sky, sun and fog from `timeOfDay`. */
   sky: boolean;
-  /** `renderer.post` settings. */
+  /** A `PostProcessSettings` component (bloom, tonemap, vignette). */
   post: boolean;
+  /** `Light.castShadows` / `MeshRenderer.castShadow`. */
   shadows: boolean;
+  /** A `WaterMaterial` component next to a MeshRenderer. */
   water: boolean;
+  /** `MeshRenderer.windStrength` sway (and `renderer.wind`). */
   wind: boolean;
+  /** `MeshRenderer.lods`. */
   lods: boolean;
+  /** `renderer.setCameraShake`. */
+  cameraShake: boolean;
+  /** A live 3D renderer is attached (false headless). */
+  renderer: boolean;
 }
 
 /** Host services for scripts (safe subset; every method degrades to a no-op headless). */
@@ -76,6 +98,8 @@ export interface ProcgenAPI {
   readonly builder: typeof builder;
   readonly palettes: typeof palettes;
   readonly seeds: typeof seeds;
+  /** Pure flight-model helpers (heading, bank turns, gate crossing). */
+  readonly flight: typeof flight;
   readonly generators: {
     island: typeof generateIsland; tree: typeof generateTree; rock: typeof generateRock; crystal: typeof generateCrystal; cloud: typeof generateCloud;
     arch: typeof generateArch; column: typeof generateColumn; stoneRing: typeof generateStoneRing; stoneLantern: typeof generateStoneLantern;
@@ -108,26 +132,35 @@ interface RendererLike {
   kind?: string;
   addMesh?(name: string, data: MeshData): void;
   removeMesh?(name: string): void;
-  sky?: unknown;
-  post?: unknown;
-  shadows?: unknown;
-  features?: Partial<RendererFeatures>;
+  setCameraShake?(amplitude: number, decay?: number): void;
+  wind?: { direction: { x: number; y: number; z: number }; strength: number };
 }
 
 function detectFeatures(engine: Engine): RendererFeatures {
   const r = engine.renderer as RendererLike | null;
-  const declared = r?.features ?? {};
-  const has = (k: keyof RendererFeatures, fallback: boolean) => (declared[k] !== undefined ? !!declared[k] : fallback);
+  const reg = engine.world.registry;
+  const mr = reg.get('MeshRenderer')?.defaults ?? {};
+  const light = reg.get('Light')?.defaults ?? {};
   return {
-    vertexColors: has('vertexColors', false),
-    sky: has('sky', !!r?.sky),
-    post: has('post', !!r?.post),
-    shadows: has('shadows', !!r?.shadows),
-    water: has('water', false),
-    wind: has('wind', false),
-    lods: has('lods', false),
+    vertexColors: 'vertexColors' in mr,
+    sky: reg.has('SkySettings'),
+    post: reg.has('PostProcessSettings'),
+    shadows: 'castShadows' in light && 'castShadow' in mr,
+    water: reg.has('WaterMaterial'),
+    wind: 'windStrength' in mr,
+    lods: 'lods' in mr,
+    cameraShake: typeof r?.setCameraShake === 'function',
+    renderer: !!r && typeof r.addMesh === 'function',
   };
 }
+
+/** Groups drawn with the default lit material can share one vertex-coloured mesh. */
+function isPlainGroup(g: MaterialHint): boolean {
+  return !g.emissive && (g.opacity === undefined || g.opacity >= 1) && !g.unlit && !g.wind && !g.water && !g.doubleSided;
+}
+
+/** World units of sway at unit height for a group with `wind: 1`. */
+const WIND_SWAY = 0.16;
 
 function makeEnv(): HostEnv {
   const win = typeof window !== 'undefined' ? window : null;
@@ -163,7 +196,7 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
   const registry = new Map<string, RegisteredMesh>();
   const features = detectFeatures(engine);
   const api: ProcgenAPI = {
-    noise, builder, palettes, seeds,
+    noise, builder, palettes, seeds, flight,
     generators: {
       island: generateIsland, tree: generateTree, rock: generateRock, crystal: generateCrystal, cloud: generateCloud,
       arch: generateArch, column: generateColumn, stoneRing: generateStoneRing, stoneLantern: generateStoneLantern,
@@ -193,7 +226,18 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
         void _data;
         return { ...rest, mesh: meshName };
       });
-      const desc: RegisteredMesh = { mesh: name, groups, bounds: generated.mesh.bounds, triangles: generated.mesh.indices.length / 3 };
+      const plain = generated.groups.filter(isPlainGroup);
+      const special = groups.filter((g) => !isPlainGroup(g));
+      let base: RegisteredGroup | undefined;
+      if (plain.length && features.vertexColors) {
+        const merged = plain.length === generated.groups.length ? generated.mesh : builder.mergeMeshes(plain.map((g) => g.data));
+        const baseName = `${name}/base`;
+        api.registerMesh(baseName, merged);
+        let rough = 0;
+        for (const g of plain) rough += g.roughness ?? 0.6;
+        base = { name: 'base', mesh: baseName, color: { r: 1, g: 1, b: 1 }, roughness: rough / plain.length, triangles: merged.indices.length / 3 };
+      }
+      const desc: RegisteredMesh = { mesh: name, groups, base, special, bounds: generated.mesh.bounds, triangles: generated.mesh.indices.length / 3 };
       registry.set(name, desc);
       return desc;
     },
@@ -201,7 +245,11 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
     registerLibrary: (world, key) => registry.get(key) ?? api.registerGenerated(key, world.library(key)),
     applyMaterial: (target, group) => {
       const color = target.color as { set?(r: number, g: number, b: number, a?: number): void } | undefined;
-      if (color && typeof color.set === 'function') color.set(group.color.r, group.color.g, group.color.b, 1);
+      // With vertex colours the palette is baked into the mesh; the material colour is a multiplier.
+      if (color && typeof color.set === 'function') {
+        if (features.vertexColors) color.set(1, 1, 1, 1);
+        else color.set(group.color.r, group.color.g, group.color.b, 1);
+      }
       const emissive = target.emissive as { set?(r: number, g: number, b: number, a?: number): void } | undefined;
       if (group.emissive && emissive && typeof emissive.set === 'function') {
         const k = features.post ? 1 : Math.min(1, group.emissiveStrength ?? 1) * 0.6;
@@ -214,8 +262,8 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
       if (group.roughness !== undefined) target.roughness = group.roughness;
       if (group.metallic !== undefined) target.metallic = group.metallic;
       if ('flatShading' in target) target.flatShading = true;
-      if (group.wind !== undefined && 'windStrength' in target) target.windStrength = group.wind;
-      if (group.water && 'water' in target) target.water = true;
+      if (group.wind !== undefined && 'windStrength' in target) target.windStrength = group.wind * WIND_SWAY;
+      if ('castShadow' in target && (group.unlit || group.water || (group.opacity !== undefined && group.opacity < 1))) target.castShadow = false;
     },
     get names() { return Array.from(registry.keys()); },
   };

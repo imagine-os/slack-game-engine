@@ -20,3 +20,4 @@ export * from './ring';
 export * from './props';
 export * from './world';
 export * from './plugin';
+export * from './flight';

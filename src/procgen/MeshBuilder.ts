@@ -14,7 +14,8 @@ import type { MeshData } from '../render/webgl/Mesh';
 export interface RGB { r: number; g: number; b: number }
 
 /** Axis-aligned bounds. */
-export interface Bounds { min: Vec3Like; max: Vec3Like }
+/** Local-space bounds in the renderer's `MeshBounds` layout (tuples). */
+export interface Bounds { min: [number, number, number]; max: [number, number, number] }
 
 /**
  * Mesh data produced by the procgen library: the renderer's `MeshData` plus
@@ -322,7 +323,7 @@ export class MeshBuilder {
   /** Recolour vertices by height through a gradient (`t` = 0 at `minY`, 1 at `maxY`). */
   gradientByHeight(stops: readonly ColorStop[], minY?: number, maxY?: number, fromTriangle = 0): this {
     const b = this.bounds();
-    const lo = minY ?? b.min.y, hi = maxY ?? b.max.y;
+    const lo = minY ?? b.min[1], hi = maxY ?? b.max[1];
     const p = this.pos, c = this.col;
     for (let v = fromTriangle * 3; v < p.length / 3; v++) {
       const t = Math.min(1, Math.max(0, remap(p[v * 3 + 1], lo, hi, 0, 1)));
@@ -374,15 +375,7 @@ export class MeshBuilder {
   // ----------------------------------------------------------------- output
 
   bounds(): Bounds {
-    const p = this.pos;
-    const min = { x: Infinity, y: Infinity, z: Infinity }, max = { x: -Infinity, y: -Infinity, z: -Infinity };
-    for (let i = 0; i < p.length; i += 3) {
-      if (p[i] < min.x) min.x = p[i]; if (p[i] > max.x) max.x = p[i];
-      if (p[i + 1] < min.y) min.y = p[i + 1]; if (p[i + 1] > max.y) max.y = p[i + 1];
-      if (p[i + 2] < min.z) min.z = p[i + 2]; if (p[i + 2] > max.z) max.z = p[i + 2];
-    }
-    if (p.length === 0) { min.x = min.y = min.z = 0; max.x = max.y = max.z = 0; }
-    return { min, max };
+    return meshBounds(this.pos);
   }
 
   /**
@@ -441,7 +434,7 @@ export class MeshBuilder {
     if (opts.smooth) smoothNormals(positions, normals);
     const indices = n > 65535 ? new Uint32Array(n) : new Uint16Array(n);
     for (let i = 0; i < n; i++) indices[i] = i;
-    const data: ProcMeshData = { name: opts.name, positions, normals, colors, uvs, indices, bounds: { min, max } };
+    const data: ProcMeshData = { name: opts.name, positions, normals, colors, uvs, indices, bounds: { min: [min.x, min.y, min.z], max: [max.x, max.y, max.z] } };
     if (hasWeights) data.weights = weights;
     return data;
   }
@@ -466,17 +459,39 @@ export function smoothNormals(positions: Float32Array, normals: Float32Array, ep
   }
 }
 
-/** Compute bounds of any mesh data. */
-export function computeBounds(positions: ArrayLike<number>): Bounds {
-  const min = { x: Infinity, y: Infinity, z: Infinity }, max = { x: -Infinity, y: -Infinity, z: -Infinity };
+/** Concatenate several coloured meshes into one (indices re-based, bounds recomputed, weights kept when every part has them). */
+export function mergeMeshes(parts: ProcMeshData[]): ProcMeshData {
+  let verts = 0, idx = 0;
+  for (const p of parts) { verts += p.positions.length / 3; idx += p.indices.length; }
+  const positions = new Float32Array(verts * 3), normals = new Float32Array(verts * 3), colors = new Float32Array(verts * 3);
+  const hasWeights = parts.length > 0 && parts.every((p) => p.weights !== undefined);
+  const weights = hasWeights ? new Float32Array(verts) : undefined;
+  const indices = verts > 65535 ? new Uint32Array(idx) : new Uint16Array(idx);
+  let v = 0, i = 0;
+  for (const p of parts) {
+    const n = p.positions.length / 3;
+    positions.set(p.positions, v * 3);
+    if (p.normals) normals.set(p.normals, v * 3);
+    colors.set(p.colors, v * 3);
+    if (weights && p.weights) weights.set(p.weights, v);
+    for (let k = 0; k < p.indices.length; k++) indices[i + k] = p.indices[k] + v;
+    v += n; i += p.indices.length;
+  }
+  const out: ProcMeshData = { positions, normals, colors, indices, bounds: meshBounds(positions) };
+  if (weights) out.weights = weights;
+  return out;
+}
+
+export function meshBounds(positions: ArrayLike<number>): Bounds {
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i], y = positions[i + 1], z = positions[i + 2];
-    if (x < min.x) min.x = x; if (x > max.x) max.x = x;
-    if (y < min.y) min.y = y; if (y > max.y) max.y = y;
-    if (z < min.z) min.z = z; if (z > max.z) max.z = z;
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+    if (z < z0) z0 = z; if (z > z1) z1 = z;
   }
-  if (positions.length === 0) { min.x = min.y = min.z = 0; max.x = max.y = max.z = 0; }
-  return { min, max };
+  if (positions.length === 0) return { min: [0, 0, 0], max: [0, 0, 0] };
+  return { min: [x0, y0, z0], max: [x1, y1, z1] };
 }
 
 /** Weld vertices sharing a position (and colour) into an indexed mesh; normals are averaged. */
@@ -504,7 +519,7 @@ export function weld(data: MeshData, eps = 1e-4): ProcMeshData {
   const idx = pos.length / 3 > 65535 ? new Uint32Array(src.length) : new Uint16Array(src.length);
   for (let i = 0; i < src.length; i++) idx[i] = remapIdx[src[i]];
   const positions = new Float32Array(pos);
-  return { name: data.name, positions, normals: new Float32Array(nrm), colors: new Float32Array(col), uvs: new Float32Array((pos.length / 3) * 2), indices: idx, bounds: computeBounds(positions) };
+  return { name: data.name, positions, normals: new Float32Array(nrm), colors: new Float32Array(col), uvs: new Float32Array((pos.length / 3) * 2), indices: idx, bounds: meshBounds(positions) };
 }
 
 /** Expand an indexed mesh so every triangle has its own vertices (flat shading). */

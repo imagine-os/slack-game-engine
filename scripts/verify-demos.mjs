@@ -29,6 +29,13 @@ async function loadPlaywright() {
 
 /** Per-demo input scripts: a list of steps run in order. */
 const PLAYS = {
+  driftwind: [
+    { wait: 1200 }, { shot: 'start' }, { press: 'Enter' }, { wait: 1500 }, { hold: ['KeyW'], ms: 700 }, { hold: ['KeyA'], ms: 500 }, { shot: 'gliding' },
+    { press: 'KeyP' }, { wait: 900 }, { shot: 'photo' }, { press: 'KeyP' }, { press: 'KeyR' }, { wait: 4200 }, { shot: 'race' },
+    { expect: 'moved', entity: 'Glider local', axis: 'x' },
+    { expect: 'count', tag: 'island', min: 3 },
+    { expect: 'hud', id: 'speed' },
+  ],
   'starter-2d': [
     { hold: ['KeyD'], ms: 900 }, { press: 'Space' }, { hold: ['KeyD'], ms: 600 }, { shot: 'run' },
     { hold: ['KeyA'], ms: 500 }, { press: 'Space' }, { wait: 400 }, { shot: 'jump' },
