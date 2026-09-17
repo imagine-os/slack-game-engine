@@ -223,7 +223,7 @@ describe('WorldGenerator', () => {
     expect(g!.island.id).toBe(isl.id);
   });
   it('builds library meshes for every decoration and island details deterministically', () => {
-    const keys = new Set<string>(['ring', 'mote', 'wind-streak', 'feather', 'bird-up', 'bird-down', 'glider-0', 'glider-5', 'cloud-0', 'cloud-5']);
+    const keys = new Set<string>(['ring', 'mote', 'wind-streak', 'feather', 'bird-up', 'bird-down', 'glider-0', 'glider-5', 'cloud-0', 'cloud-5', 'waterfall', 'sea-shade', 'sea-splash']);
     for (let i = 0; i < 6; i++) for (const d of W.islandDetail(i).decorations) keys.add(d.key);
     expect(keys.size).toBeGreaterThan(12);
     for (const key of keys) {
@@ -238,6 +238,37 @@ describe('WorldGenerator', () => {
     expect(d1.decorations.length).toBeGreaterThan(3);
     const desc = W.describe();
     expect(desc.islands).toBe(W.islands.length);
+  });
+  it('places landmark islands with a fly-through arch and a crown above, lantern trails at gates and a sea below everything', () => {
+    const landmarks = W.islands.filter((i) => i.landmark);
+    expect(landmarks.length).toBeGreaterThanOrEqual(2);
+    for (const l of landmarks) {
+      expect(l.radius).toBeGreaterThan(35);
+      const d = W.islandDetail(l.id);
+      const arch = d.decorations.find((x) => x.kind === 'arch');
+      expect(arch, `${l.name} arch`).toBeDefined();
+      expect(arch!.scale).toBeGreaterThan(2.5);
+      expect(Math.abs(arch!.yaw - l.yaw)).toBeLessThan(1e-9);
+      expect(d.decorations.some((x) => x.kind === 'stonering')).toBe(true);
+      expect(d.flock).not.toBeNull();
+      expect(d.island.waterfalls.length).toBe(2);
+      const crown = W.islands.find((i) => i.crownOf === l.id);
+      expect(crown, `${l.name} crown`).toBeDefined();
+      expect(crown!.position.y).toBeGreaterThan(l.position.y + l.height + 20);
+      expect(Math.hypot(crown!.position.x - l.position.x, crown!.position.z - l.position.z)).toBeLessThan(l.radius);
+    }
+    for (const r of W.rings) {
+      expect(r.lanterns.length).toBe(8);
+      for (const p of r.lanterns) expect(Math.hypot(p.x - r.position.x, p.z - r.position.z)).toBeLessThan(50);
+    }
+    expect(W.bounds.seaLevel).toBeLessThan(W.bounds.minY - 100);
+    for (const i of W.islands) expect(i.position.y - i.depth).toBeGreaterThan(W.bounds.seaLevel);
+    // Clouds occupy three tiers: below the islands, at flight level and above.
+    const below = W.clouds.filter((c) => c.position.y < W.bounds.minY).length;
+    const above = W.clouds.filter((c) => c.position.y > W.bounds.maxY).length;
+    expect(below).toBeGreaterThan(20);
+    expect(above).toBeGreaterThan(5);
+    expect(W.clouds.length - below - above).toBeGreaterThan(20);
   });
 });
 

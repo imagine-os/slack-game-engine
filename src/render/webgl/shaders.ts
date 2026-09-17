@@ -70,16 +70,18 @@ float fogAmount(vec3 wp) {
   }
   return 0.0;
 }
-vec3 applyFog(vec3 color, vec3 wp) {
-  if (uFogMode == 0) return color;
-  float f = fogAmount(wp);
+vec3 fogColorAt(vec3 wp) {
   vec3 fogCol = uFogColor;
   if (uFogMode == 2 && uFogSun.a > 0.0) {
     vec3 v = normalize(wp - uCameraPos);
     float sunAmount = pow(max(dot(v, uSunDir), 0.0), 6.0);
     fogCol = mix(fogCol, uFogSun.rgb, sunAmount * uFogSun.a);
   }
-  return mix(color, fogCol, f);
+  return fogCol;
+}
+vec3 applyFog(vec3 color, vec3 wp) {
+  if (uFogMode == 0) return color;
+  return mix(color, fogColorAt(wp), fogAmount(wp));
 }
 `;
 
@@ -366,6 +368,13 @@ void main() {
   // Warm band along the horizon on the sun side at low sun.
   float horizonBand = exp(-abs(h) * 14.0) * pow(max(dot(normalize(vec3(d.x, 0.0, d.z)), normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4)), 0.0), 3.0);
   col += uSunColor * horizonBand * lowSun * 0.35 * (1.0 - night);
+  // Soft vertical light pillar and corona through a low sun (reads as sun shafts through haze).
+  vec3 sunFlat = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-4);
+  float sideways = abs(dot(d, vec3(-sunFlat.z, 0.0, sunFlat.x)));
+  float pillar = exp(-sideways * 28.0) * exp(-abs(h - uSunDir.y) * 5.0) * smoothstep(0.2, 0.9, dot(d, sunFlat));
+  col += uSunColor * pillar * lowSun * uSunParams.y * 0.14 * aboveGround * (1.0 - night);
+  float corona = exp(-(1.0 - cosA) * 90.0);
+  col += uSunColor * corona * uSunParams.y * 0.18 * aboveGround;
   float disc = smoothstep(uSunParams.x - 0.0008, uSunParams.x + 0.0004, cosA);
   col += uSunColor * disc * 6.0 * aboveGround * step(0.0, uSunDir.y + 0.02);
   // Stars.
@@ -400,21 +409,15 @@ void main() {
  * choppiness), flat or analytic normals, two-tone colour by wave height,
  * fresnel rim to the horizon colour, sun glint and animated foam.
  */
-export const WATER_VS = /* glsl */ `#version 300 es
-precision highp float;
-${INSTANCE_ATTRIBS}
-uniform mat4 uViewProj;
+/**
+ * Sum of four world-space sines with slight choppiness. Shared by the water
+ * vertex shader (displacement) and fragment shader (per-pixel normals, so a
+ * coarsely tessellated ocean plane still shows every wave).
+ */
+const WAVE_GLSL = /* glsl */ `
 uniform float uTime;
 uniform vec4 uWave;      // amplitude, wavelength, speed, steepness
 uniform vec2 uWaveDir;
-uniform bool uVertexColors;
-out vec3 vWorldPos;
-out vec3 vNormal;
-out vec2 vUV;
-out vec3 vColor;
-out float vHeight;
-out float vBaseY;
-
 const float TAU = 6.28318530718;
 void wave(vec2 dir, float amp, float len, float speed, inout vec3 p, inout vec3 dPdx, inout vec3 dPdz) {
   float k = TAU / len;
@@ -431,21 +434,47 @@ void wave(vec2 dir, float amp, float len, float speed, inout vec3 p, inout vec3 
   dPdz.xz += dir * (q * amp * s * k * dir.y);
 }
 mat2 rot(float a) { float s = sin(a), c = cos(a); return mat2(c, -s, s, c); }
+/** Displace \`p\` (rest position) by every octave; returns the surface tangents in dPdx/dPdz. */
+void waves(inout vec3 p, out vec3 dPdx, out vec3 dPdz) {
+  dPdx = vec3(1.0, 0.0, 0.0); dPdz = vec3(0.0, 0.0, 1.0);
+  vec2 d0 = normalize(uWaveDir);
+  float A = uWave.x, L = max(uWave.y, 0.05), S = uWave.z;
+  // Large-scale domain warp so the sum of sines does not settle into a visible regular lattice.
+  vec2 w = vec2(sin(p.z * (0.7 / L) + p.x * (0.23 / L)), cos(p.x * (0.57 / L) - p.z * (0.31 / L))) * (L * 0.35);
+  vec3 q = p; q.xz += w;
+  vec3 qx = vec3(1.0, 0.0, 0.0), qz = vec3(0.0, 0.0, 1.0);
+  wave(d0, A, L, S, q, qx, qz);
+  wave(rot(1.13) * d0, A * 0.55, L * 0.59, S * 1.1, q, qx, qz);
+  wave(rot(-1.87) * d0, A * 0.3, L * 0.353, S * 1.25, q, qx, qz);
+  wave(rot(2.41) * d0, A * 0.18, L * 0.213, S * 1.4, q, qx, qz);
+  p.y = q.y; p.xz = q.xz - w;
+  dPdx = qx; dPdz = qz;
+}
+`;
+
+export const WATER_VS = /* glsl */ `#version 300 es
+precision highp float;
+${INSTANCE_ATTRIBS}
+uniform mat4 uViewProj;
+uniform bool uVertexColors;
+out vec3 vWorldPos;
+out vec3 vNormal;
+out vec2 vUV;
+out vec3 vColor;
+out float vHeight;
+out float vBaseY;
+${WAVE_GLSL}
 
 void main() {
   mat4 model = mat4(aModel0, aModel1, aModel2, aModel3);
   vec4 wp = model * vec4(aPosition, 1.0);
   vBaseY = wp.y;
   vec3 p = wp.xyz;
-  vec3 dPdx = vec3(1.0, 0.0, 0.0), dPdz = vec3(0.0, 0.0, 1.0);
-  vec2 d0 = normalize(uWaveDir);
-  float A = uWave.x, L = max(uWave.y, 0.05), S = uWave.z;
-  wave(d0, A, L, S, p, dPdx, dPdz);
-  wave(rot(0.9) * d0, A * 0.55, L * 0.62, S * 1.1, p, dPdx, dPdz);
-  wave(rot(-1.4) * d0, A * 0.3, L * 0.37, S * 1.25, p, dPdx, dPdz);
-  wave(rot(2.3) * d0, A * 0.18, L * 0.21, S * 1.4, p, dPdx, dPdz);
+  vec3 dPdx, dPdz;
+  waves(p, dPdx, dPdz);
   vWorldPos = p;
   vNormal = normalize(cross(dPdz, dPdx));
+  float A = uWave.x;
   vHeight = A > 0.0 ? clamp((p.y - wp.y) / (A * 2.03), -1.0, 1.0) : 0.0;
   vUV = aUV;
   vColor = uVertexColors ? aColor : vec3(0.0);
@@ -466,50 +495,93 @@ uniform vec3 uShallowColor;
 uniform vec3 uFoamColor;
 uniform vec4 uFoam;        // shorelineHeight, foamWidth, crestFoam, time
 uniform vec4 uWaterParams; // fresnel, specular, opacity, flatShading
+uniform vec4 uWaterFog;    // fog tint rgb, fog strength
 uniform vec3 uCameraPos;
 uniform vec3 uAmbientSky;
 uniform vec3 uAmbientGround;
 uniform vec3 uDirLightDir;
 uniform vec3 uDirLightColor;
 uniform bool uReceiveShadow;
-uniform vec2 uWaveDir;
 ${LINEAR_GLSL}
 ${FOG_GLSL}
 ${SHADOW_GLSL}
+${WAVE_GLSL}
 out vec4 fragColor;
+
+float hash12(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float vnoise2(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1, 0)), u.x), mix(hash12(i + vec2(0, 1)), hash12(i + vec2(1, 1)), u.x), u.y);
+}
 
 void main() {
   float time = uFoam.w;
-  vec3 N = uWaterParams.w > 0.5 ? normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos))) : normalize(vNormal);
+  vec3 N;
+  float h01;
+  if (uWaterParams.w > 0.5) {
+    N = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
+    h01 = vHeight * 0.5 + 0.5;
+  } else {
+    // Analytic normal and height at this pixel: independent of the mesh tessellation, so a
+    // huge ocean plane with 100-unit quads still shows every wave.
+    vec3 p = vec3(vWorldPos.x, vBaseY, vWorldPos.z);
+    vec3 dPdx, dPdz;
+    waves(p, dPdx, dPdz);
+    N = normalize(cross(dPdz, dPdx));
+    h01 = uWave.x > 0.0 ? clamp((p.y - vBaseY) / (uWave.x * 2.03), -1.0, 1.0) * 0.5 + 0.5 : 0.5;
+    // Far away the wave frequency drops below a pixel and only shimmers: settle toward a calm
+    // surface (and mid-height, so no foam) with distance, like a distance LOD.
+    float calm = smoothstep(uWave.y * 2.5, uWave.y * 12.0, length(vWorldPos - uCameraPos));
+    N = normalize(mix(N, vec3(0.0, 1.0, 0.0), calm));
+    h01 = mix(h01, 0.5, calm);
+  }
   vec3 V = normalize(uCameraPos - vWorldPos);
   if (dot(N, V) < 0.0) N = -N;
-  float h01 = vHeight * 0.5 + 0.5;
   vec3 albedo = mix(uDeepColor, uShallowColor, smoothstep(0.15, 0.95, h01));
   vec3 ambient = mix(uAmbientGround, uAmbientSky, N.y * 0.5 + 0.5);
   vec3 L = normalize(-uDirLightDir);
   float NdotL = max(dot(N, L), 0.0);
   float sh = (uShadows && uReceiveShadow && NdotL > 0.0) ? shadowAt(vWorldPos, N, NdotL) : 1.0;
-  vec3 color = albedo * (ambient + uDirLightColor * (0.25 + 0.75 * NdotL) * sh);
-  // Sun glint: a tight and a broad lobe.
+  // Water scatters skylight more than sunlight: soften the sun's tint so a teal sea stays
+  // teal under an orange sunset instead of going grey-brown.
+  float sunLum = dot(uDirLightColor, vec3(0.299, 0.587, 0.114));
+  vec3 sunSoft = mix(vec3(sunLum), uDirLightColor, 0.5);
+  vec3 color = albedo * (ambient + sunSoft * (0.3 + 0.7 * NdotL) * sh);
+  // Sun glint: a tight lobe, a broad lobe and a long glitter band toward the sun at grazing angles.
   vec3 H = normalize(L + V);
   float NdotH = max(dot(N, H), 0.0);
-  float spec = pow(NdotH, 260.0) * 1.4 + pow(NdotH, 32.0) * 0.06;
+  float grazing = 1.0 - max(dot(N, V), 0.0);
+  float spec = pow(NdotH, 260.0) * 1.4 + pow(NdotH, 48.0) * 0.12 + pow(NdotH, 12.0) * 0.05 * grazing;
   color += uDirLightColor * spec * uWaterParams.y * sh;
-  // Fresnel rim toward the horizon colour.
-  float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
-  color = mix(color, uFogColor, fres * uWaterParams.x);
-  // Foam: crests, baked shore mask (vertex colour red) and a height band.
+  // Fresnel rim toward the (tinted) horizon colour.
+  vec3 fogCol = fogColorAt(vWorldPos) * uWaterFog.rgb;
+  float fres = pow(grazing, 4.0);
+  color = mix(color, fogCol, fres * uWaterParams.x);
+  // Foam: crests, drifting specks on the upper swell, baked shore mask (vertex colour red) and a height band.
   vec2 wd = normalize(uWaveDir);
   float ripple = sin(dot(vWorldPos.xz, wd) * 2.1 - time * 2.4) * 0.5 + 0.5;
   float ripple2 = sin(vWorldPos.x * 1.3 + vWorldPos.z * 1.7 + time * 1.1) * 0.5 + 0.5;
-  float crest = smoothstep(uFoam.z, min(uFoam.z + 0.18, 1.0), h01) * (0.55 + 0.45 * ripple2);
+  // Crests: the sine sum peaks on a regular lattice, so gate the crest foam with noise to break it up.
+  float crestGate = smoothstep(0.35, 0.8, vnoise2(vWorldPos.xz * (1.2 / max(uWave.y, 0.05)) + wd * time * 0.12));
+  float crest = smoothstep(uFoam.z, min(uFoam.z + 0.18, 1.0), h01) * (0.55 + 0.45 * ripple2) * crestGate * 0.7;
+  // Specks: fine noise gated by a large patchy noise so they cluster instead of tiling.
+  float speckScale = 4.0 / max(uWave.y, 0.05);
+  float speckN = vnoise2(vWorldPos.xz * speckScale + wd * time * 0.35);
+  float patchN = vnoise2(vWorldPos.xz * speckScale * 0.11 - wd * time * 0.05);
+  float specks = smoothstep(0.83, 0.94, speckN) * smoothstep(0.42, 0.75, patchN) * smoothstep(0.5, 0.85, h01) * (1.0 - step(1.0, uFoam.z));
   float shore = clamp(vColor.r, 0.0, 1.0);
   float shoreFoam = smoothstep(0.62, 1.0, shore + 0.3 * shore * sin(shore * 9.0 - time * 2.2)) * (0.6 + 0.4 * ripple);
   float band = uFoam.y > 0.0 ? 1.0 - smoothstep(0.0, uFoam.y, abs(vBaseY - uFoam.x)) : 0.0;
   float bandFoam = band * smoothstep(0.35, 0.8, ripple * 0.7 + ripple2 * 0.3 + band * 0.3);
-  float foam = clamp(crest + shoreFoam + bandFoam, 0.0, 1.0);
+  float foam = clamp(crest + specks * 0.8 + shoreFoam + bandFoam, 0.0, 1.0);
   color = mix(color, uFoamColor * (ambient + uDirLightColor * sh), foam * 0.9);
-  color = applyFog(color, vWorldPos);
+  // Fog, scaled and tinted for water so a warm haze does not wash the sea out.
+  if (uFogMode != 0) color = mix(color, fogCol, fogAmount(vWorldPos) * uWaterFog.a);
   float alpha = clamp(uWaterParams.z + fres * (1.0 - uWaterParams.z) * 0.5 + foam * 0.4, 0.0, 1.0);
   fragColor = vec4(color, alpha);
 }

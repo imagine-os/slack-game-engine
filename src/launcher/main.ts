@@ -24,6 +24,8 @@ interface DemoEntry {
   featured?: boolean;
   /** Shown as the big banner above the demo grid (the first flagged demo wins). */
   hero?: boolean;
+  /** Rendered screenshot for the hero banner (falls back to `thumbnail`). */
+  heroImage?: string;
   /** Starter template (what "New project" copies). */
   template?: boolean;
 }
@@ -153,7 +155,9 @@ function heroBanner(d: DemoEntry): HTMLElement {
   const title = demoTitle(d);
   const banner = el('section', 'showcase');
   banner.setAttribute('aria-label', `${title} showcase`);
-  if (d.thumbnail) banner.style.backgroundImage = `url("./demos/${d.id}/${d.thumbnail}")`;
+  const art = d.heroImage ?? d.thumbnail;
+  if (art) banner.style.backgroundImage = `url("./demos/${d.id}/${art}")`;
+  if (d.heroImage) banner.classList.add('has-photo');
   const body = el('div', 'showcase-body');
   body.appendChild(el('span', 'showcase-kicker', 'Featured demo'));
   body.appendChild(el('h2', undefined, title));

@@ -4,7 +4,7 @@
  * balloons, collectible light motes and wind-current streaks.
  */
 import { Random } from '../core/math/Random';
-import { type GeneratedMesh, MeshBuilder, type RGB, addBox, addCylinder, addIcosphere, addLathe, mixRGB, rgb, shade } from './MeshBuilder';
+import { type GeneratedMesh, MeshBuilder, type RGB, addBox, addCylinder, addDisc, addIcosphere, addLathe, mixRGB, rgb, shade } from './MeshBuilder';
 import { PALETTES, type Palette } from './palettes';
 
 /** Turbine tower and nacelle (static part). Hub is at `(0, height, -0.45)`. */
@@ -109,9 +109,17 @@ export function generateMote(color: RGB = rgb('#ffe9a8')): GeneratedMesh {
   b.group('mote', color, { unlit: true, emissive: color, emissiveStrength: 2 });
   addIcosphere(b, 0.45, 0);
   b.scale(0.8, 1.2, 0.8);
-  b.group('mote-halo', mixRGB(color, { r: 1, g: 1, b: 1 }, 0.3), { unlit: true, opacity: 0.35, emissive: color, emissiveStrength: 1 });
-  addIcosphere(b, 0.75, 0);
+  b.group('mote-halo', mixRGB(color, { r: 1, g: 1, b: 1 }, 0.3), { unlit: true, opacity: 0.22, emissive: color, emissiveStrength: 0.8 });
+  addIcosphere(b, 0.6, 1);
   return b.buildAll({ name: 'mote' });
+}
+
+/** Soft translucent puff for wingtip contrails (unit-ish sphere, scaled per particle). */
+export function generateTrailPuff(color: RGB = rgb('#fff6ea')): GeneratedMesh {
+  const b = new MeshBuilder();
+  b.group('puff', color, { unlit: true, opacity: 0.2 });
+  addIcosphere(b, 0.5, 1);
+  return b.buildAll({ name: 'trail-puff' });
 }
 
 /** Thin elongated streak quad along Z for wind-current visuals (translucent, unlit). */
@@ -130,4 +138,43 @@ export function generateFeather(color: RGB = rgb('#fff7ee')): GeneratedMesh {
   b.group('feather', color, { unlit: true, opacity: 0.9, doubleSided: true });
   b.quad({ x: -0.08, y: 0, z: -0.25 }, { x: 0.08, y: 0, z: -0.25 }, { x: 0.02, y: 0, z: 0.3 }, { x: -0.02, y: 0, z: 0.3 });
   return b.buildAll({ name: 'feather' });
+}
+
+/**
+ * Long waterfall ribbon hanging from an island lip to the sea: two crossed
+ * translucent quads of unit height (origin at the top, hangs along -Y), tapering
+ * and narrowing toward the bottom so it fades into spray. Scale Y to the drop.
+ */
+export function generateWaterfallRibbon(palette: Palette = PALETTES.meadow, width = 0.8): GeneratedMesh {
+  const b = new MeshBuilder();
+  const top = mixRGB(palette.water, palette.foam, 0.25);
+  const bottom = mixRGB(palette.water, palette.foam, 0.6);
+  b.group('fall', top, { unlit: true, opacity: 0.22, doubleSided: true });
+  const steps = 6;
+  const taper = (t: number): number => width * (0.12 + 0.88 * Math.pow(1 - t, 1.6));
+  for (let s = 0; s < steps; s++) {
+    const t0 = s / steps, t1 = (s + 1) / steps;
+    const w0 = taper(t0), w1 = taper(t1);
+    const c0 = mixRGB(top, bottom, t0), c1 = mixRGB(top, bottom, t1);
+    const wob0 = Math.sin(t0 * 9.0) * width * 0.12, wob1 = Math.sin(t1 * 9.0) * width * 0.12;
+    b.quad({ x: -w0 + wob0, y: -t0, z: 0 }, { x: w0 + wob0, y: -t0, z: 0 }, { x: w1 + wob1, y: -t1, z: 0 }, { x: -w1 + wob1, y: -t1, z: 0 }, mixRGB(c0, c1, 0.5));
+    b.quad({ x: 0, y: -t0, z: -w0 * 0.7 }, { x: 0, y: -t0, z: w0 * 0.7 }, { x: 0, y: -t1, z: w1 * 0.7 }, { x: 0, y: -t1, z: -w1 * 0.7 }, mixRGB(c0, c1, 0.5));
+  }
+  return b.buildAll({ name: 'waterfall' });
+}
+
+/** Dark translucent disc of unit radius laid just above the sea under an island: a cheap fake reflection / shadow. */
+export function generateSeaShadeDisc(color: RGB = rgb('#06243f')): GeneratedMesh {
+  const b = new MeshBuilder();
+  b.group('shade', color, { unlit: true, opacity: 0.45 });
+  addDisc(b, 1, 0, 18, undefined, false, (a) => 0.85 + 0.15 * Math.sin(a * 3) * Math.cos(a * 5));
+  return b.buildAll({ name: 'sea-shade' });
+}
+
+/** Bright foam disc of unit radius where a waterfall meets the sea. */
+export function generateSplashDisc(palette: Palette = PALETTES.meadow): GeneratedMesh {
+  const b = new MeshBuilder();
+  b.group('splash', mixRGB(palette.foam, palette.water, 0.3), { unlit: true, opacity: 0.32 });
+  addDisc(b, 1, 0, 14, undefined, false, (a) => 0.7 + 0.3 * Math.abs(Math.sin(a * 4 + 0.7)));
+  return b.buildAll({ name: 'sea-splash' });
 }

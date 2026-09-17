@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DRIFTWIND_SFX } from '../../../scripts/lib/driftwind-sfx';
@@ -8,7 +9,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** Default world; `?seed=` on the URL or the start screen override it. */
 export const DEFAULT_SEED = 'amber-lagoon-42';
 
+/** Rendered 1600x900 hero screenshot (captured from the running demo); optional so the build works without it. */
+const HERO_PNG = join(here, 'hero.png');
+
 export function build(): DemoBundle {
+  const hero = existsSync(HERO_PNG) ? new Uint8Array(readFileSync(HERO_PNG)) : null;
   const b = new SceneBuilder();
   b.entity('Camera', {
     Transform: { position: { x: 60, y: 70, z: 60 } },
@@ -25,17 +30,20 @@ export function build(): DemoBundle {
   b.entity('Ambient', { Transform: {}, Light: { kind: 'ambient', intensity: 0.12, color: hex('#c0b0ff') } });
   b.entity('Sky', {
     Transform: {},
+    // Golden hour with a cool zenith and a layered cloud band; the Sky script drifts timeOfDay so the
+    // sun sinks to the horizon and the first stars fade in over a long session. Fog is thin at flight
+    // height and thickens toward the sea (fogHeight is repositioned by the script).
     SkySettings: {
-      mode: 'procedural', timeOfDay: 17.5, sunAzimuth: 35, sunElevationScale: 0.8, turbidity: 0.42, sunSize: 2.8, sunGlow: 1.15, clouds: 0.3, cloudSpeed: 0.6, stars: 1,
-      sunIntensity: 1.25, ambientIntensity: 1.05, fogEnabled: true, fogDensity: 0.0011, fogStart: 90, fogHeightFalloff: 0.006, fogHeight: -360, fogSunBlend: 0.45,
+      mode: 'procedural', timeOfDay: 17.65, sunAzimuth: 35, sunElevationScale: 0.8, turbidity: 0.3, sunSize: 3.2, sunGlow: 1.35, clouds: 0.42, cloudSpeed: 0.6, cloudHeight: 0.3, stars: 1,
+      sunIntensity: 1.25, ambientIntensity: 1.05, fogEnabled: true, fogDensity: 0.0009, fogStart: 110, fogHeightFalloff: 0.0075, fogHeight: -190, fogSunBlend: 0.5,
     },
     PostProcessSettings: {
-      enabled: true, hdr: true, msaa: 4, bloom: true, bloomThreshold: 1, bloomSoftKnee: 0.5, bloomIntensity: 0.38, bloomRadius: 1.1,
-      exposure: 1.02, tonemap: 'aces', saturation: 1.1, contrast: 1.05, vignette: 0.3, vignetteSmoothness: 0.6, fxaa: true, chromaticAberration: 0.1,
+      enabled: true, hdr: true, msaa: 4, bloom: true, bloomThreshold: 0.95, bloomSoftKnee: 0.5, bloomIntensity: 0.45, bloomRadius: 1.15,
+      exposure: 0.98, tonemap: 'aces', saturation: 1.15, contrast: 1.06, vignette: 0.32, vignetteSmoothness: 0.6, fxaa: true, chromaticAberration: 0.1,
     },
-    Script: { script: 'Sky', props: { hour: 17.5, driftHours: 0.55, driftPeriod: 540 } },
+    Script: { script: 'Sky', props: { hour: 17.65, driftHours: 0.5, driftPeriod: 540 } },
   });
-  b.entity('World', { Transform: {}, Script: { script: 'WorldStreamer', props: { seed: DEFAULT_SEED, streamRadius: 520, lodDistance: 260, islands: 34, detail: true } } });
+  b.entity('World', { Transform: {}, Script: { script: 'WorldStreamer', props: { seed: DEFAULT_SEED, streamRadius: 520, lodDistance: 260, islands: 40, detail: true } } });
   b.entity('GameManager', {
     Transform: {},
     Script: { script: 'GameManager', props: { seed: DEFAULT_SEED, countdown: 3 } },
@@ -113,9 +121,11 @@ export function build(): DemoBundle {
       players: { min: 1, max: 8 }, tags: ['flying', 'procedural', 'relaxing', 'racing', 'webgl'],
       controls: ['A/D: bank', 'W/S: pitch', 'Space: boost', 'X: brake', 'P: photo mode', 'R: race'],
       featured: true, hero: true,
+      ...(hero ? { heroImage: 'hero.png' } : {}),
     },
     project,
     files: {
+      ...(hero ? { 'hero.png': hero } : {}),
       'assets/wind.wav': DRIFTWIND_SFX.wind(),
       'assets/chime.wav': DRIFTWIND_SFX.chime(),
       'assets/whoosh.wav': DRIFTWIND_SFX.whoosh(),

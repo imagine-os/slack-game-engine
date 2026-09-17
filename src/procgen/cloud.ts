@@ -3,7 +3,7 @@
  * undersides as two colour groups.
  */
 import { Random } from '../core/math/Random';
-import { type GeneratedMesh, MeshBuilder, type RGB, addIcosphere, mixRGB, rgb } from './MeshBuilder';
+import { type GeneratedMesh, MeshBuilder, type RGB, addIcosphere, mixRGB, rgb, smoothNormals } from './MeshBuilder';
 import { Noise } from './noise';
 
 export interface CloudOptions {
@@ -31,11 +31,16 @@ export function generateCloud(seed: number, opts: CloudOptions = {}): GeneratedM
     const along = (t - 0.5) * size * 0.75;
     const r = size * (0.16 + 0.12 * Math.sin(t * Math.PI)) * rng.range(0.85, 1.15);
     const start = b.triangleCount;
-    addIcosphere(b, r, opts.lod ? 0 : 1, undefined, (d) => r * (0.88 + 0.18 * noise.simplex3(d.x * 1.5 + i * 3, d.y * 1.5, d.z * 1.5)));
+    addIcosphere(b, r, opts.lod ? 0 : 1, undefined, (d) => r * (0.9 + 0.14 * noise.simplex3(d.x * 1.5 + i * 3, d.y * 1.5, d.z * 1.5)));
     const oz = rng.range(-0.18, 0.18) * size, oy = rng.range(-0.05, 0.12) * size * Math.sin(t * Math.PI);
     b.displace((p, idx) => { if (idx >= start * 3) { p.y *= 0.55; if (p.y < -r * 0.25) p.y = -r * 0.25 + (p.y + r * 0.25) * 0.3; p.x += along; p.y += oy; p.z += oz; } });
   }
-  b.regroupFaces((n) => (n.y > 0.12 ? gLight : gShade));
-  b.colorFaces((n, _c, g) => (g === gLight ? mixRGB(light, shadow, Math.max(0, 0.4 - n.y) * 0.6) : mixRGB(shadow, light, Math.max(0, n.y + 0.3) * 0.4)));
-  return b.buildAll({ name: `cloud-${seed}` });
+  b.regroupFaces((n) => (n.y > -0.2 ? gLight : gShade));
+  b.colorFaces((n, _c, g) => (g === gLight ? mixRGB(light, shadow, Math.max(0, 0.5 - n.y) * 0.5) : mixRGB(shadow, light, Math.max(0, n.y + 0.5) * 0.5)));
+  // Soft, rounded shading: average the face normals of coincident vertices (the renderer draws clouds smooth).
+  const out = b.buildAll({ name: `cloud-${seed}` });
+  const soften = (d: { positions: Float32Array; normals?: Float32Array }) => { if (d.normals) smoothNormals(d.positions, d.normals, 1e-3); };
+  soften(out.mesh);
+  for (const g of out.groups) soften(g.data);
+  return out;
 }

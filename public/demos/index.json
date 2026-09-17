@@ -28,7 +28,8 @@
         "R: race"
       ],
       "featured": true,
-      "hero": true
+      "hero": true,
+      "heroImage": "hero.png"
     },
     {
       "id": "arena-blasters",

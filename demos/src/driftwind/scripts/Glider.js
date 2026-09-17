@@ -47,6 +47,7 @@ defineScript({
   onDestroy(ctx) {
     const s = ctx.state;
     if (s.windLoop) s.windLoop.stop(0.3);
+    if (s.trail) for (const p of s.trail.puffs) if (ctx.world.isAlive(p.e)) ctx.destroy(p.e);
     const h = hud(ctx);
     if (h && this.isLocal(ctx)) for (const id of ['speed', 'alt', 'boostbar', 'boostbg', 'flight-mode', 'stall']) h.remove(id);
   },
@@ -71,6 +72,64 @@ defineScript({
         const ct = ctx.getOn(child, 'Transform');
         if (ct) { ct.setPosition(0, 0, 0); ct.setScale(1, 1, 1); ct.rotation.set(0, 0, 0, 1); ct.markDirty(); }
       }
+    }
+  },
+  /**
+   * Wingtip contrails: a pool of soft unlit puffs dropped at both wingtips, growing
+   * then shrinking with age (one material, so the whole trail is a single instanced draw).
+   */
+  ensureTrail(ctx) {
+    const s = ctx.state, P = pg(ctx), W = world(ctx);
+    if (s.trail || !P || !W || !P.features.renderer) return;
+    const key = `${W.seed}:trail-puff`;
+    const desc = P.registered(key) || P.registerGenerated(key, W.library('trail-puff'));
+    const g = desc.groups[0];
+    const puffs = [];
+    for (let i = 0; i < 36; i++) {
+      const e = ctx.world.createEntity('Contrail');
+      const t = ctx.getOn(e, 'Transform');
+      const mr = ctx.world.addComponentByType(e, 'MeshRenderer', { mesh: g.mesh });
+      P.applyMaterial(mr, g);
+      mr.castShadow = false; mr.receiveShadow = false; mr.visible = false;
+      puffs.push({ e, t, mr, age: 99, life: 1, size: 1 });
+    }
+    s.trail = { puffs, timer: 0, next: 0, tip: new ctx.math.Vec3(), tmp: new ctx.math.Vec3() };
+  },
+  updateTrail(ctx, dt) {
+    const s = ctx.state, T = s.trail;
+    if (!T) return;
+    const speed = Math.max(s.renderSpeed, this.isLocal(ctx) ? s.speed : 0);
+    const boosting = !!s.wasBoosting;
+    const intensity = Math.max(0, (speed - 18) / 28) + (boosting ? 0.8 : 0);
+    T.timer += dt;
+    const interval = boosting ? 0.03 : 0.05;
+    if (intensity > 0.05 && T.timer >= interval) {
+      T.timer = 0;
+      const t = ctx.transform;
+      t.updateWorldMatrix();
+      for (const side of [-1, 1]) {
+        const p = T.puffs[T.next]; T.next = (T.next + 1) % T.puffs.length;
+        T.tmp.set(side * 2.55, 0.12, 0.3);
+        t.localToWorld(T.tmp, T.tip);
+        p.t.setPosition(T.tip.x, T.tip.y, T.tip.z);
+        p.age = 0; p.life = boosting ? 1.1 : 0.75; p.size = (boosting ? 0.34 : 0.22) * Math.min(1.5, 0.6 + intensity);
+        p.mr.visible = true;
+      }
+    }
+    // Puffs drifting past the chase camera would fill the screen: shrink them away within a few units of it.
+    const r = ctx.engine.renderer, cam = r && r.cameraPosition;
+    for (const p of T.puffs) {
+      if (!p.mr.visible) continue;
+      p.age += dt;
+      const k = p.age / p.life;
+      if (k >= 1) { p.mr.visible = false; continue; }
+      let sc = p.size * (0.5 + 1.0 * k) * (1 - k * k);
+      if (cam) {
+        const d = Math.hypot(p.t.x - cam.x, p.t.y - cam.y, p.t.z - cam.z);
+        sc *= Math.min(1, Math.max(0, (d - 3) / 5));
+      }
+      if (sc < 0.01) sc = 0.01;
+      p.t.setScale(sc, sc * 0.7, sc);
     }
   },
   orient(ctx) {
@@ -108,7 +167,11 @@ defineScript({
         P.env.storageSet(`driftwind.best.${W.seed}`, String(data.time));
         if (s.ghostPath.length > 2) P.env.storageSet(`driftwind.ghost.${W.seed}`, JSON.stringify(s.ghostPath));
       }
-    } else if (name === 'worldSeed') { s.discovered = {}; s.gates = 0; s.motes = 0; ctx.timer(0.05, () => this.applyLook(ctx)); }
+    } else if (name === 'worldSeed') {
+      s.discovered = {}; s.gates = 0; s.motes = 0;
+      if (s.trail) { for (const p of s.trail.puffs) if (ctx.world.isAlive(p.e)) ctx.destroy(p.e); s.trail = null; }
+      ctx.timer(0.05, () => this.applyLook(ctx));
+    }
   },
 
   onOwnerInput(ctx, snap, dt) {
@@ -159,10 +222,11 @@ defineScript({
     let vx = f.x * s.speed + s.drift.x, vy = f.y * s.speed + s.drift.y - sink, vz = f.z * s.speed + s.drift.z;
     // Soft ceiling and floor, with an updraft recovery under the archipelago.
     const B = W ? W.bounds : { minY: -40, maxY: 140 };
-    const ceiling = B.maxY + 70, floor = B.minY - 40;
+    // The floor is an updraft just above the sea, so you can skim the waves but never touch them.
+    const ceiling = B.maxY + 70, floor = (B.seaLevel !== undefined ? B.seaLevel : B.minY - 130) + 14;
     if (t.y > ceiling) { s.pitch -= (t.y - ceiling) * 0.02 * dt; vy -= (t.y - ceiling) * 0.6; }
-    if (t.y < floor) { s.pitch += (floor - t.y) * 0.04 * dt; vy += (floor - t.y) * 0.9; s.speed = Math.max(s.speed, p.cruise); s.boost = Math.min(1, s.boost + dt * 0.6); }
-    if (t.y < floor - 220 && W) { const sp = W.spawn(0); this.teleport(ctx, sp.position, sp.yaw); return; }
+    if (t.y < floor) { s.pitch += (floor - t.y) * 0.05 * dt; vy += (floor - t.y) * 1.1; s.speed = Math.max(s.speed, p.cruise); s.boost = Math.min(1, s.boost + dt * 0.6); }
+    if (t.y < floor - 60 && W) { const sp = W.spawn(0); this.teleport(ctx, sp.position, sp.yaw); return; }
     s.lastPos.x = t.x; s.lastPos.y = t.y; s.lastPos.z = t.z;
     t.position.x += vx * dt; t.position.y += vy * dt; t.position.z += vz * dt;
     s.vel.x = vx; s.vel.y = vy; s.vel.z = vz;
@@ -223,13 +287,15 @@ defineScript({
 
   onUpdate(ctx, dt) {
     const s = ctx.state, t = ctx.transform;
-    if (!this.isLocal(ctx)) return;
     // Render-side speed (works for host-simulated remote copies too).
     if (dt > 0) {
       const d = Math.hypot(t.x - (s.rx ?? t.x), t.y - (s.ry ?? t.y), t.z - (s.rz ?? t.z)) / dt;
       s.renderSpeed = ctx.math.damp(s.renderSpeed, Math.min(d, 200), 6, dt);
     }
     s.rx = t.x; s.ry = t.y; s.rz = t.z;
+    this.ensureTrail(ctx);
+    if (s.flying || !this.isLocal(ctx)) this.updateTrail(ctx, dt);
+    if (!this.isLocal(ctx)) return;
     const W = world(ctx);
     if (s.windLoop) s.windLoop.setVolume(ctx.math.clamp(0.08 + s.renderSpeed / 90, 0, 0.75) * (s.flying ? 1 : 0.5));
     if (W && s.flying) this.collectAround(ctx, W);
@@ -280,10 +346,10 @@ defineScript({
     const speed = Math.round(s.renderSpeed * 3.6);
     const W = world(ctx);
     const ground = W ? W.groundBelow(t.position) : null;
-    const alt = Math.max(0, Math.round(t.y - (ground ? ground.y : (W ? W.bounds.minY - 40 : 0))));
+    const alt = Math.max(0, Math.round(t.y - (ground ? ground.y : (W ? (W.bounds.seaLevel !== undefined ? W.bounds.seaLevel : W.bounds.minY - 130) : 0))));
     const el = h.text('speed', `${speed}`, { anchor: 'bottom', y: 54, x: 0 });
     el.style.cssText += 'font-size:44px;font-weight:200;letter-spacing:0.04em;text-align:center;line-height:1;font-variant-numeric:tabular-nums;';
-    const alte = h.text('alt', `${alt} m  ·  ${ground ? 'over ' + ground.island.name : 'open sky'}`, { anchor: 'bottom', y: 40, x: 0 });
+    const alte = h.text('alt', `${alt} m  ·  ${ground ? 'over ' + ground.island.name : 'above the sea'}`, { anchor: 'bottom', y: 40, x: 0 });
     alte.style.cssText += 'font-size:12px;letter-spacing:0.18em;text-transform:uppercase;opacity:0.75;text-align:center;';
     const bg = h.text('boostbg', '', { anchor: 'bottom', y: 26, x: 0 });
     bg.style.cssText += 'width:180px;height:4px;border-radius:2px;background:rgba(255,255,255,0.18);';

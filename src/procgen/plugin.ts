@@ -106,6 +106,7 @@ export interface ProcgenAPI {
     glider: typeof generateGlider; bird: typeof generateBird; ring: typeof generateRing;
     turbine: typeof props.generateTurbine; turbineBlades: typeof props.generateTurbineBlades; windsock: typeof props.generateWindsock;
     paperLantern: typeof props.generatePaperLantern; balloon: typeof props.generateBalloon; mote: typeof props.generateMote; windStreak: typeof props.generateWindStreak; feather: typeof props.generateFeather;
+    waterfallRibbon: typeof props.generateWaterfallRibbon; seaShadeDisc: typeof props.generateSeaShadeDisc; splashDisc: typeof props.generateSplashDisc;
   };
   readonly features: RendererFeatures;
   readonly env: HostEnv;
@@ -207,6 +208,7 @@ export function createProcgenAPI(engine: Engine): ProcgenAPI {
       glider: generateGlider, bird: generateBird, ring: generateRing,
       turbine: props.generateTurbine, turbineBlades: props.generateTurbineBlades, windsock: props.generateWindsock,
       paperLantern: props.generatePaperLantern, balloon: props.generateBalloon, mote: props.generateMote, windStreak: props.generateWindStreak, feather: props.generateFeather,
+      waterfallRibbon: props.generateWaterfallRibbon, seaShadeDisc: props.generateSeaShadeDisc, splashDisc: props.generateSplashDisc,
     },
     features,
     env: makeEnv(),

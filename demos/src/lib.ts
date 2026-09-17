@@ -34,6 +34,8 @@ export interface DemoIndexEntry {
   template?: boolean;
   /** Flagship: the launcher shows it as a hero banner above the gallery. */
   hero?: boolean;
+  /** Optional rendered screenshot (relative to the demo folder) the hero banner prefers over `thumbnail`. */
+  heroImage?: string;
 }
 
 /** Everything the build script needs to publish one demo. */

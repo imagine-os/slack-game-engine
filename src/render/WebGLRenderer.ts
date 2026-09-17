@@ -848,6 +848,8 @@ export class WebGLRenderer implements Renderer, QualityTarget {
     this.setColor(shader, 'uFoamColor', w.foamColor);
     shader.setVec4('uFoam', w.shorelineHeight, w.foamWidth, w.crestFoam, this.time);
     shader.setVec4('uWaterParams', w.fresnel, w.specular, w.opacity * m.opacity, w.flatShading ? 1 : 0);
+    if (this.linear) shader.setVec4('uWaterFog', toLinear(w.fogTint.r), toLinear(w.fogTint.g), toLinear(w.fogTint.b), w.fogStrength);
+    else shader.setVec4('uWaterFog', w.fogTint.r, w.fogTint.g, w.fogTint.b, w.fogStrength);
     shader.setFloat('uTime', this.time);
     shader.setVec4('uWave', w.waveAmplitude, w.waveLength, w.waveSpeed, w.waveSteepness);
     const a = (w.waveDirection * Math.PI) / 180;

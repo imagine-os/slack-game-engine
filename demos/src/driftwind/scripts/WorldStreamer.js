@@ -14,7 +14,7 @@ defineScript({
     seed: { type: 'string', default: 'amber-lagoon-42', label: 'World seed' },
     streamRadius: { type: 'number', default: 520, min: 100, max: 2000 },
     lodDistance: { type: 'number', default: 260, min: 50, max: 2000 },
-    islands: { type: 'integer', default: 34, min: 4, max: 120 },
+    islands: { type: 'integer', default: 40, min: 4, max: 120 },
     detail: { type: 'boolean', default: true, label: 'Trees, rocks and props' },
   },
   onStart(ctx) {
@@ -140,18 +140,28 @@ defineScript({
     }
     const pal = P.palettes.PALETTES[W.primaryBiome];
     const e = ctx.world.createEntity('Sea');
-    s.seaY = W.bounds.minY - 320;
+    s.seaY = W.bounds.seaLevel !== undefined ? W.bounds.seaLevel : W.bounds.minY - 130;
     const t = ctx.getOn(e, 'Transform');
     t.setPosition(0, s.seaY, 0);
     const mr = ctx.world.addComponentByType(e, 'MeshRenderer', { mesh: name, castShadow: false, frustumCulled: false });
     mr.color.set(1, 1, 1, 1);
+    const B = P.builder;
     ctx.world.addComponentByType(e, 'WaterMaterial', {
-      // crestFoam is a height threshold (0..1): keep it high so only the tallest crests break.
-      // Albedo is multiplied by the (orange) golden-hour light, so keep the water bright and saturated to stay teal.
-      deepColor: rgba(P.builder.mixRGB(P.builder.rgb('#0e5a86'), pal.water, 0.3)), shallowColor: rgba(P.builder.mixRGB(P.builder.rgb('#35b6d6'), pal.water, 0.35)), foamColor: rgba(pal.foam),
-      waveAmplitude: 0.5, waveLength: 30, waveSpeed: 0.45, waveSteepness: 0.15, crestFoam: 0.93, fresnel: 0.35, specular: 0.7, opacity: 1, flatShading: false,
+      // Deep, saturated blue-teal; a touch of the biome's water colour keeps worlds distinct. The shader
+      // desaturates the golden-hour sun for water and fogStrength/fogTint keep the warm haze from washing it out.
+      deepColor: rgba(B.mixRGB(B.rgb('#062f5c'), pal.water, 0.15)), shallowColor: rgba(B.mixRGB(B.rgb('#1690b8'), pal.water, 0.28)), foamColor: rgba(B.mixRGB(pal.foam, B.rgb('#ffffff'), 0.5)),
+      waveAmplitude: 1.1, waveLength: 34, waveSpeed: 0.55, waveSteepness: 0.22, crestFoam: 0.84, fresnel: 0.55, specular: 1.35, opacity: 1, flatShading: false,
+      fogStrength: 0.55, fogTint: { r: 0.6, g: 0.82, b: 1, a: 1 },
     });
     s.sea = { entity: e, t };
+  },
+
+  /** Flat unit-radius disc on the sea surface (fake island reflection / shadow, waterfall splash). */
+  spawnSeaDisc(ctx, key, x, z, radius, lift) {
+    const s = ctx.state;
+    const e = this.spawnObject(ctx, key, this.reg(ctx, key), { x, y: s.seaY + lift, z }, 0, 1, null, undefined, { castShadow: false });
+    ctx.getOn(e, 'Transform').setScale(radius, 1, radius);
+    return e;
   },
 
   focus(ctx) {
@@ -192,6 +202,7 @@ defineScript({
     for (const isl of content.islands) this.spawnIsland(ctx, isl, chunk);
     for (const cloud of content.clouds) {
       const e = this.spawnObject(ctx, `Cloud ${cloud.id}`, this.reg(ctx, cloud.key), cloud.position, cloud.yaw, cloud.scale, 'cloud', undefined, { castShadow: false });
+      for (const c of ctx.world.getChildren(e)) { const mr = ctx.getOn(c, 'MeshRenderer'); if (mr) { mr.flatShading = false; mr.roughness = 1; } }
       chunk.entities.push(e);
       const rec = { kind: 'drift', t: ctx.getOn(e, 'Transform'), base: cloud.position, speed: cloud.drift, phase: cloud.id };
       chunk.anim.push(rec); s.anim.push(rec);
@@ -201,6 +212,16 @@ defineScript({
       const e = this.spawnObject(ctx, `Gate ${ring.index + 1}`, desc, ring.position, ring.yaw, ring.radius / 6, 'ring');
       ctx.world.addComponentByType(e, 'Script', { script: 'Ring', props: { index: ring.index } });
       chunk.entities.push(e);
+      // Lantern trail lining the approach.
+      if (ring.lanterns && ctx.props.detail) {
+        const lanternDesc = this.reg(ctx, `lantern-${W.primaryBiome}`);
+        ring.lanterns.forEach((p, k) => {
+          const le = this.spawnObject(ctx, 'Trail Lantern', lanternDesc, p, ring.yaw, 0.8, null, undefined, { hideAt: 480, castShadow: false });
+          chunk.entities.push(le);
+          const rec = { kind: 'bob', t: ctx.getOn(le, 'Transform'), base: p, phase: k * 0.9 + ring.index, speed: 1 };
+          chunk.anim.push(rec); s.anim.push(rec);
+        });
+      }
     }
   },
 
@@ -218,6 +239,22 @@ defineScript({
     const lod = { position: spec.position, hi, lo, far: false };
     chunk.entities.push(root, lodRoot);
     chunk.lods.push(lod); s.islandLods.push(lod);
+    if (s.sea) {
+      // Fake reflection: a dark disc on the sea under the island; waterfalls continue as long ribbons down to a splash.
+      chunk.entities.push(this.spawnSeaDisc(ctx, 'sea-shade', spec.position.x, spec.position.z, spec.radius * 1.15, 0.6));
+      if (detail.island.waterfalls && detail.island.waterfalls.length && (spec.landmark || (spec.radius >= 20 && spec.crownOf === undefined && spec.id % 3 === 0))) {
+        const fallDesc = this.reg(ctx, 'waterfall');
+        for (const a of detail.island.waterfalls) {
+          const top = { x: spec.position.x + a.x, y: spec.position.y + a.y - 0.5, z: spec.position.z + a.z };
+          const drop = top.y - s.seaY;
+          if (drop <= 0) continue;
+          const fe = this.spawnObject(ctx, 'Waterfall', fallDesc, top, Math.atan2(a.x, a.z), 1, null, undefined, { castShadow: false, hideAt: 460 });
+          ctx.getOn(fe, 'Transform').setScale(spec.landmark ? 1.5 : 1, drop, spec.landmark ? 1.5 : 1);
+          chunk.entities.push(fe);
+          chunk.entities.push(this.spawnSeaDisc(ctx, 'sea-splash', top.x, top.z, spec.landmark ? 3.5 : 2.2, 0.9));
+        }
+      }
+    }
     if (ctx.props.detail) {
       for (const d of detail.decorations) {
         const small = SMALL_PROPS.has(d.kind);

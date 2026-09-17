@@ -648,13 +648,22 @@ export class WaterMaterial extends Component {
   shorelineHeight = 0;
   /** Half-width of that band in world units; 0 disables it (default). */
   foamWidth = 0;
-  /** Crest foam threshold (0..1 of amplitude; 1 = none). */
+  /**
+   * Crest foam threshold on the normalised wave height (0 = trough, 1 = the
+   * tallest crest when every wave octave peaks together); foam breaks above
+   * it, so 0.9+ gives rare white caps and 0.6 a choppy sea. 1 disables it.
+   * Also sprinkles small drifting foam specks on the upper half of the swell.
+   */
   crestFoam = 0.75;
   /** Reflection-like rim toward the horizon colour. */
   fresnel = 0.45;
   specular = 0.8;
   opacity = 0.85;
   flatShading = true;
+  /** How much the scene fog affects this water (0 = none, 1 = like every other surface). */
+  fogStrength = 1;
+  /** Multiplied into the fog / horizon colour for this water only, so a warm haze can stay cool over the sea (white = no change). */
+  fogTint = new Color(1, 1, 1, 1);
 }
 registerComponent(WaterMaterial, {
   category: 'Rendering 3D',
@@ -672,6 +681,7 @@ registerComponent(WaterMaterial, {
     fresnel: { type: 'number', min: 0, max: 1, step: 0.01 },
     specular: { type: 'number', min: 0, max: 3, step: 0.05 },
     opacity: { type: 'number', min: 0, max: 1, step: 0.01 },
+    fogStrength: { type: 'number', min: 0, max: 1, step: 0.01 },
   },
 });
 

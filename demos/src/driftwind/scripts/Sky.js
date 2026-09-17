@@ -26,9 +26,11 @@ defineScript({
     s.pinned = Number.isFinite(pinned) ? ((pinned % 24) + 24) % 24 : null;
     if (s.sky) {
       s.sky.enabled = true;
-      // Fog: thin and warm around the islands, thickening toward the sea far below.
+      // Fog: thin and warm around the islands, thickening toward the sea below (the water shader
+      // takes only part of it, see WaterMaterial.fogStrength).
       const W = P && P.world;
-      s.sky.fogHeight = W ? W.bounds.minY - 360 : -360;
+      const seaLevel = W ? (W.bounds.seaLevel !== undefined ? W.bounds.seaLevel : W.bounds.minY - 130) : -160;
+      s.sky.fogHeight = seaLevel - 30;
       const cam = this.camera(ctx);
       if (cam) cam.fogEnabled = false;
     }

@@ -17,7 +17,7 @@ import { type IslandResult, generateIsland } from './island';
 import { type GeneratedMesh, mixRGB, rgb } from './MeshBuilder';
 import { Noise, hash2i } from './noise';
 import { BIOME_IDS, type BiomeId, LIVERIES, PALETTES, type Palette } from './palettes';
-import { generateBalloon, generateFeather, generateMote, generatePaperLantern, generateTurbine, generateTurbineBlades, generateWindStreak, generateWindsock } from './props';
+import { generateBalloon, generateFeather, generateMote, generatePaperLantern, generateSeaShadeDisc, generateSplashDisc, generateTrailPuff, generateTurbine, generateTurbineBlades, generateWaterfallRibbon, generateWindStreak, generateWindsock } from './props';
 import { generateRing } from './ring';
 import { generateCrystal, generateRock } from './rock';
 import { generateArch, generateColumn, generateStoneLantern, generateStoneRing } from './ruins';
@@ -25,16 +25,20 @@ import { normalizeSeed, seedValue } from './seed';
 import { generateTree, pickSpecies } from './tree';
 
 export interface WorldOptions {
-  /** Number of islands along the flow path. Default 34. */
+  /** Number of islands along the flow path (landmark crowns are added on top). Default 40. */
   islands?: number;
-  /** Distance between consecutive islands along the path. Default 92. */
+  /** Distance between consecutive islands along the path. Default 74. */
   spacing?: number;
   /** Streaming chunk size in world units. Default 160. */
   chunkSize?: number;
   /** Number of race gates. Default 12. */
   gates?: number;
-  /** Cloud count. Default 70. */
+  /** Cloud count. Default 120. */
   clouds?: number;
+  /** Every n-th island is a giant landmark with ruins, a fly-through arch and a crown island above it. Default 13 (0 = none). */
+  landmarkEvery?: number;
+  /** Height of the sea below the lowest island underside. Default 130. */
+  seaDepth?: number;
 }
 
 export interface IslandSpec {
@@ -52,6 +56,14 @@ export interface IslandSpec {
   /** Progress along the flow path (0 start .. 1 end). */
   t: number;
   chunk: string;
+  /** Heading of the flow path where the island sits (radians about Y, 0 = -Z). */
+  yaw: number;
+  /** Which side of the path the island sits on (+1 / -1). */
+  side: number;
+  /** Giant island with guaranteed ruins, a fly-through arch and long waterfalls. */
+  landmark?: boolean;
+  /** Small island floating above a landmark (id of the landmark below). */
+  crownOf?: number;
 }
 
 export type DecorationKind = 'tree' | 'rock' | 'crystal' | 'arch' | 'column' | 'stonering' | 'stone-lantern' | 'turbine' | 'turbine-blades' | 'windsock' | 'lantern' | 'balloon';
@@ -89,6 +101,8 @@ export interface RingSpec {
   yaw: number;
   radius: number;
   chunk: string;
+  /** Floating lanterns lining the approach to the gate (world space). */
+  lanterns: Vec3Like[];
 }
 
 export interface WindCurrent {
@@ -162,8 +176,8 @@ export class WorldGenerator {
   readonly rings: RingSpec[] = [];
   readonly winds: WindCurrent[] = [];
   readonly clouds: CloudSpec[] = [];
-  /** Altitude range of the archipelago (for floors/ceilings). */
-  readonly bounds: { minY: number; maxY: number; radius: number };
+  /** Altitude range of the archipelago (for floors/ceilings) and the height of the sea below it. */
+  readonly bounds: { minY: number; maxY: number; radius: number; seaLevel: number };
   /** Palette of the world's dominant biome (sky tint, glider defaults). */
   readonly primaryBiome: BiomeId;
 
@@ -178,8 +192,9 @@ export class WorldGenerator {
     this.chunkSize = opts.chunkSize ?? 160;
     const rng = new Random(this.seedValue);
     this.noise = new Noise(this.seedValue ^ 0x77);
-    const count = opts.islands ?? 34;
-    const spacing = opts.spacing ?? 92;
+    const count = opts.islands ?? 40;
+    const spacing = opts.spacing ?? 74;
+    const landmarkEvery = opts.landmarkEvery ?? 13;
 
     // ---- flow path: a widening spiral with altitude swells.
     const turns = 2.1, r0 = 70, r1 = r0 + spacing * count / (Math.PI * 2 * 1.35);
@@ -202,28 +217,59 @@ export class WorldGenerator {
     // Biomes: contiguous regions along the path, a shuffled order per seed.
     const order = rng.shuffle(BIOME_IDS.slice());
     const regions = order.length;
+    const crowns: IslandSpec[] = [];
     for (let i = 0; i < count; i++) {
       const s = step * (i + 0.5);
       const { point, tangent, t } = this.samplePath(arc, s);
-      const side = (i % 2 === 0 ? 1 : -1) * rng.range(0.55, 1);
+      const sideSign = i % 2 === 0 ? 1 : -1;
+      const side = sideSign * rng.range(0.55, 1);
       const nx = -tangent.z, nz = tangent.x;
-      const radius = rng.range(13, 24) * (i === 0 ? 0.9 : 1);
-      const lateral = spacing * 0.38 * side + rng.range(-6, 6);
-      const position = { x: point.x + nx * lateral, y: point.y + rng.range(-14, -4), z: point.z + nz * lateral };
+      const yaw = Math.atan2(-tangent.x, -tangent.z);
+      const landmark = landmarkEvery > 0 && i > 2 && i % landmarkEvery === 6;
       const biome = order[Math.min(regions - 1, Math.floor(t * regions * 0.999))];
       const seed = hash2i(i, 91, this.seedValue);
       const name = `${ISLAND_ADJ[(seed >>> 3) % ISLAND_ADJ.length]} ${ISLAND_NOUN[(seed >>> 9) % ISLAND_NOUN.length]}`;
-      const spec: IslandSpec = {
-        id: i, name, seed, position, radius, height: radius * rng.range(0.3, 0.45), depth: radius * rng.range(0.7, 1.05), biome,
-        terraces: rng.chance(0.3) ? 0 : rng.int(2, 4), ruggedness: rng.range(0.3, 0.8), waterfalls: rng.chance(0.55) ? 1 : rng.chance(0.3) ? 2 : 0,
-        t, chunk: '',
-      };
-      spec.chunk = this.chunkKey(position.x, position.z);
+      let spec: IslandSpec;
+      if (landmark) {
+        // A giant: the path grazes its rim, so the glider skims terraces, ruins and a fly-through arch.
+        const radius = rng.range(40, 50);
+        const lateral = (radius * 0.9 + 4) * sideSign;
+        const position = { x: point.x + nx * lateral, y: point.y - radius * 0.62, z: point.z + nz * lateral };
+        spec = {
+          id: i, name: `Great ${name}`, seed, position, radius, height: radius * 0.45, depth: radius * rng.range(1.0, 1.25), biome,
+          terraces: rng.int(3, 4), ruggedness: rng.range(0.35, 0.6), waterfalls: 2, t, chunk: '', yaw, side: sideSign, landmark: true,
+        };
+        // A crown island floating above it, offset back toward the path so the glider can thread between the two.
+        const cr = rng.range(9, 13);
+        const cpos = { x: position.x - nx * sideSign * radius * 0.35, y: position.y + radius * 0.62 + 46 + rng.range(0, 8), z: position.z - nz * sideSign * radius * 0.35 };
+        const cseed = hash2i(i, 93, this.seedValue);
+        crowns.push({
+          id: -1, name: `${ISLAND_ADJ[(cseed >>> 3) % ISLAND_ADJ.length]} Crown`, seed: cseed, position: cpos, radius: cr, height: cr * 0.4, depth: cr * 0.9, biome,
+          terraces: rng.int(1, 2), ruggedness: rng.range(0.4, 0.8), waterfalls: 1, t, chunk: '', yaw, side: sideSign, crownOf: i,
+        });
+      } else {
+        const radius = rng.range(13, 26) * (i === 0 ? 0.9 : 1);
+        const lateral = spacing * 0.3 * side + rng.range(-5, 5);
+        const position = { x: point.x + nx * lateral, y: point.y + rng.range(-16, -3), z: point.z + nz * lateral };
+        spec = {
+          id: i, name, seed, position, radius, height: radius * rng.range(0.3, 0.45), depth: radius * rng.range(0.7, 1.05), biome,
+          terraces: rng.chance(0.3) ? 0 : rng.int(2, 4), ruggedness: rng.range(0.3, 0.8), waterfalls: rng.chance(0.6) ? 1 : rng.chance(0.35) ? 2 : 0,
+          t, chunk: '', yaw, side: sideSign,
+        };
+      }
+      spec.chunk = this.chunkKey(spec.position.x, spec.position.z);
       this.islands.push(spec);
-      minY = Math.min(minY, position.y - spec.depth); maxY = Math.max(maxY, position.y + spec.height);
-      maxR = Math.max(maxR, Math.hypot(position.x, position.z) + radius);
     }
-    this.bounds = { minY, maxY, radius: maxR + 200 };
+    for (const c of crowns) {
+      c.id = this.islands.length;
+      c.chunk = this.chunkKey(c.position.x, c.position.z);
+      this.islands.push(c);
+    }
+    for (const spec of this.islands) {
+      minY = Math.min(minY, spec.position.y - spec.depth); maxY = Math.max(maxY, spec.position.y + spec.height);
+      maxR = Math.max(maxR, Math.hypot(spec.position.x, spec.position.z) + spec.radius);
+    }
+    this.bounds = { minY, maxY, radius: maxR + 200, seaLevel: minY - (opts.seaDepth ?? 130) };
     const biomeCount = new Map<BiomeId, number>();
     for (const isl of this.islands) biomeCount.set(isl.biome, (biomeCount.get(isl.biome) ?? 0) + 1);
     this.primaryBiome = Array.from(biomeCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'meadow';
@@ -237,7 +283,16 @@ export class WorldGenerator {
       const off = rng.range(-8, 8);
       const position = { x: point.x + nx * off, y: point.y + rng.range(-3, 5), z: point.z + nz * off };
       const yaw = Math.atan2(-tangent.x, -tangent.z);
-      const ring: RingSpec = { index: g, position, yaw, radius: rng.range(6, 8.5), chunk: this.chunkKey(position.x, position.z) };
+      const radius = rng.range(6, 8.5);
+      // Lantern trail: paired floating lanterns lining the last 36 units of the approach, like runway lights.
+      const lanterns: Vec3Like[] = [];
+      const fx = -Math.sin(yaw), fz = -Math.cos(yaw); // through-axis (forward)
+      for (let k = 0; k < 8; k++) {
+        const along = -38 + k * 5;
+        const lat = (k % 2 === 0 ? 1 : -1) * (radius + 2.5 + (7 - k) * 0.6);
+        lanterns.push({ x: position.x + fx * along + nx * lat, y: position.y - 1 + Math.sin(k * 1.3) * 1.2, z: position.z + fz * along + nz * lat });
+      }
+      const ring: RingSpec = { index: g, position, yaw, radius, chunk: this.chunkKey(position.x, position.z), lanterns };
       this.rings.push(ring);
     }
 
@@ -258,14 +313,25 @@ export class WorldGenerator {
       this.winds.push({ id: w, points, strength: rng.range(10, 18), radius: rng.range(7, 11) });
     }
 
-    // ---- clouds: a layer below the islands, a thinner one above.
-    const cloudCount = opts.clouds ?? 70;
+    // ---- clouds: a thick layer between the islands and the sea, a flight-level tier beside the
+    // path (so the glider threads between them) and a thin one above.
+    const cloudCount = opts.clouds ?? 120;
     for (let c = 0; c < cloudCount; c++) {
-      const a = rng.range(0, Math.PI * 2), r = Math.sqrt(rng.range(0.05, 1)) * (maxR + 120);
-      const below = rng.chance(0.72);
-      const y = below ? minY - rng.range(10, 45) : maxY + rng.range(25, 60);
-      const position = { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
-      this.clouds.push({ id: c, key: `cloud-${c % 6}`, position, scale: rng.range(0.9, below ? 2.4 : 1.4), yaw: rng.range(0, Math.PI * 2), chunk: this.chunkKey(position.x, position.z), drift: rng.range(0.4, 1.2) });
+      const tier = rng.next() < 0.45 ? 'below' : rng.next() < 0.6 ? 'mid' : 'above';
+      let position: Vec3Like, scale: number;
+      if (tier === 'mid') {
+        const { point, tangent } = this.samplePath(arc, rng.range(0.02, 0.98) * total);
+        const nx = -tangent.z, nz = tangent.x;
+        const lat = rng.sign() * rng.range(58, 125);
+        position = { x: point.x + nx * lat, y: point.y + rng.range(-18, 12), z: point.z + nz * lat };
+        scale = rng.range(0.7, 1.3);
+      } else {
+        const a = rng.range(0, Math.PI * 2), r = Math.sqrt(rng.range(0.05, 1)) * (maxR + 120);
+        const y = tier === 'below' ? minY - rng.range(12, 70) : maxY + rng.range(25, 60);
+        position = { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
+        scale = rng.range(0.9, tier === 'below' ? 2.6 : 1.4);
+      }
+      this.clouds.push({ id: c, key: `cloud-${c % 6}`, position, scale, yaw: rng.range(0, Math.PI * 2), chunk: this.chunkKey(position.x, position.z), drift: rng.range(0.4, 1.2) });
     }
 
     // ---- chunk index.
@@ -359,8 +425,36 @@ export class WorldGenerator {
     for (const s of shape.samplePoints(rng, Math.round(density.crystals * rng.range(0, 2.5)), { maxSlope: 0.5 })) {
       decorations.push({ kind: 'crystal', key: `crystal-${spec.biome}-${rng.int(0, 1)}`, position: world(s.position), yaw: rng.range(0, Math.PI * 2), scale: rng.range(0.8, 1.4) });
     }
+    // Landmarks: a stone ring on the summit, columns around it, and a fly-through arch on the rim facing the path.
+    if (spec.landmark) {
+      const top = shape.samplePoints(rng, 12, { maxSlope: 0.15, maxU: 0.55 }).sort((a, b) => b.position.y - a.position.y)[0];
+      if (top) {
+        decorations.push({ kind: 'stonering', key: `stonering-${spec.biome}`, position: world(top.position), yaw: rng.range(0, Math.PI * 2), scale: 2.2 });
+        const cols = rng.int(3, 5);
+        for (let k = 0; k < cols; k++) {
+          const a = (k / cols) * Math.PI * 2 + rng.range(-0.2, 0.2), r = spec.radius * rng.range(0.28, 0.4);
+          const lx = top.position.x + Math.cos(a) * r, lz = top.position.z + Math.sin(a) * r;
+          const ly = shape.heightAt(lx, lz);
+          if (Number.isFinite(ly)) decorations.push({ kind: 'column', key: `column-${spec.biome}`, position: world({ x: lx, y: ly, z: lz }), yaw: a, scale: rng.range(1.6, 2.2) });
+        }
+        for (let k = 0; k < 2; k++) {
+          const a = rng.range(0, Math.PI * 2), r = spec.radius * rng.range(0.45, 0.7);
+          const lx = top.position.x + Math.cos(a) * r, lz = top.position.z + Math.sin(a) * r;
+          const ly = shape.heightAt(lx, lz);
+          if (Number.isFinite(ly)) decorations.push({ kind: 'stone-lantern', key: `stone-lantern-${spec.biome}`, position: world({ x: lx, y: ly, z: lz }), yaw: a, scale: 1.6 });
+        }
+      }
+      // Arch on the rim toward the path, opening along the path heading: the glider can fly straight through.
+      const toPath = -spec.side;
+      const nx = -Math.cos(spec.yaw), nz = Math.sin(spec.yaw); // path normal (left of the heading)
+      const dir = Math.atan2(nz * toPath, nx * toPath);
+      const ar = shape.outlineAt(dir) * 0.72;
+      const ax = Math.cos(dir) * ar, az = Math.sin(dir) * ar;
+      const ay = shape.heightAt(ax, az);
+      decorations.push({ kind: 'arch', key: `arch-${spec.biome}`, position: world({ x: ax, y: (Number.isFinite(ay) ? ay : shape.rimY) - 0.3, z: az }), yaw: spec.yaw, scale: 3.2 });
+    }
     // Ruins: one set on some islands, near a flat spot.
-    if (rng.chance(density.ruins * 0.7)) {
+    if (!spec.landmark && rng.chance(density.ruins * 0.7)) {
       const flat = shape.samplePoints(rng, 6, { maxSlope: 0.12, maxU: 0.7 }).sort((a, b) => a.slope - b.slope)[0];
       if (flat) {
         const kind = rng.pick(['arch', 'column', 'stonering'] as const)!;
@@ -405,7 +499,9 @@ export class WorldGenerator {
       const a = ma + (k / moteCount) * Math.PI * 1.2, r = spec.radius * rng.range(1.15, 1.45);
       motes.push(world({ x: Math.cos(a) * r, y: spec.height * 0.4 + rng.range(3, 12) + k * 1.2, z: Math.sin(a) * r }));
     }
-    const flock: FlockSpec | null = rng.chance(0.4) ? { center: world({ x: 0, y: spec.height + 8, z: 0 }), radius: spec.radius * 1.1, count: rng.int(5, 9) } : null;
+    const flock: FlockSpec | null = spec.landmark || rng.chance(0.6)
+      ? { center: world({ x: 0, y: spec.height + 8, z: 0 }), radius: spec.radius * (spec.landmark ? 0.8 : 1.1), count: spec.landmark ? rng.int(10, 14) : rng.int(6, 11) }
+      : null;
     d = { spec, island, lod, decorations, motes, flock, palette };
     this.details.set(id, d);
     return d;
@@ -422,7 +518,8 @@ export class WorldGenerator {
    * Shared meshes referenced by decorations, clouds, rings and gliders,
    * generated on first request. Keys: `tree-<biome>-<species>-<n>`,
    * `rock-<biome>-<n>`, `crystal-<biome>-<n>`, `arch|column|stonering|stone-lantern|turbine|turbine-blades|windsock|lantern-<biome>`,
-   * `balloon-<n>`, `cloud-<n>`, `ring`, `mote`, `wind-streak`, `feather`, `bird-up|down|glide`, `glider-<n>`.
+   * `balloon-<n>`, `cloud-<n>`, `ring`, `mote`, `wind-streak`, `feather`, `bird-up|down|glide`, `glider-<n>`,
+   * `waterfall` (unit-height ribbon), `sea-shade` / `sea-splash` (unit-radius discs laid on the sea), `trail-puff`.
    */
   library(key: string): GeneratedMesh {
     let m = this.lib.get(key);
@@ -442,11 +539,14 @@ export class WorldGenerator {
       case 'windsock': m = generateWindsock(biomeOf(parts[1])); break;
       case 'lantern': m = generatePaperLantern(biomeOf(parts[1])); break;
       case 'balloon': m = generateBalloon(seed + Number(parts[1] ?? 0), PALETTES[this.primaryBiome]); break;
-      case 'cloud': m = generateCloud(this.seedValue + Number(parts[1] ?? 0) * 977, { light: rgb('#fff6ec'), shadow: mixRGB(rgb('#d9c6e8'), PALETTES[this.primaryBiome].sand, 0.3) }); break;
+      case 'cloud': m = generateCloud(this.seedValue + Number(parts[1] ?? 0) * 977, { light: rgb('#fffaf3'), shadow: mixRGB(rgb('#e3ddf2'), PALETTES[this.primaryBiome].sand, 0.12) }); break;
+      case 'trail': m = generateTrailPuff(); break;                                                         // trail-puff
       case 'ring': m = generateRing({ palette: PALETTES[this.primaryBiome], glow: PALETTES[this.primaryBiome].accent }); break;
       case 'mote': m = generateMote(PALETTES[this.primaryBiome].lantern); break;
       case 'wind': m = generateWindStreak(); break;
       case 'feather': m = generateFeather(); break;
+      case 'waterfall': m = generateWaterfallRibbon(PALETTES[this.primaryBiome]); break;                 // unit-height ribbon, scale Y to the drop
+      case 'sea': m = parts[1] === 'splash' ? generateSplashDisc(PALETTES[this.primaryBiome]) : generateSeaShadeDisc(); break; // sea-shade | sea-splash, unit radius
       case 'bird': m = generateBird({ pose: (parts[1] as 'up' | 'down' | 'glide') ?? 'glide' }); break;
       case 'glider': m = generateGlider({ livery: LIVERIES[Number(parts[1] ?? 0) % LIVERIES.length] }); break;
       default: throw new Error(`Unknown library key "${key}"`);
