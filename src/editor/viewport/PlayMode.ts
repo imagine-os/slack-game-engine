@@ -5,6 +5,7 @@ import type { Project } from '../../project/types';
 import type { Diagnostic } from '../../scripting/types';
 import type { PlayState } from '../app/EditorState';
 import { el } from '../ui/dom';
+import { procgenPlugin } from '../../procgen/plugin';
 
 export interface PlayModeEvents extends Record<string, unknown> {
   change: PlayState;
@@ -39,6 +40,7 @@ export class PlayMode {
     this.canvas = el('canvas', { attrs: { 'aria-label': 'Game preview', tabindex: '0' } });
     this.host.appendChild(this.canvas);
     const engine = Engine.create(this.canvas, engineOptionsFor(project, { render: { preserveDrawingBuffer: true } }));
+    engine.use(procgenPlugin);
     this.engine = engine;
     for (const level of ['error', 'warn', 'log'] as const) engine.diagnostics.on(level, (d) => this.events.emit('diagnostic', { level, d }));
     try {

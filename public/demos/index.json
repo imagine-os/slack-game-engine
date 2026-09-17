@@ -1,6 +1,36 @@
 {
   "demos": [
     {
+      "id": "driftwind",
+      "name": "Driftwind",
+      "title": "Driftwind",
+      "description": "Glide through a procedurally generated floating archipelago at golden hour. Relax, collect light motes and discover islands, or race friends through gate rings. Every world comes from a shareable seed.",
+      "thumbnail": "thumbnail.svg",
+      "renderer": "3d",
+      "multiplayer": true,
+      "players": {
+        "min": 1,
+        "max": 8
+      },
+      "tags": [
+        "flying",
+        "procedural",
+        "relaxing",
+        "racing",
+        "webgl"
+      ],
+      "controls": [
+        "A/D: bank",
+        "W/S: pitch",
+        "Space: boost",
+        "X: brake",
+        "P: photo mode",
+        "R: race"
+      ],
+      "featured": true,
+      "hero": true
+    },
+    {
       "id": "arena-blasters",
       "name": "Arena Blasters",
       "title": "Arena Blasters",

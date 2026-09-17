@@ -32,6 +32,8 @@ export interface DemoIndexEntry {
   featured: boolean;
   /** Starter templates are listed separately by the launcher and used by "New project". */
   template?: boolean;
+  /** Flagship: the launcher shows it as a hero banner above the gallery. */
+  hero?: boolean;
 }
 
 /** Everything the build script needs to publish one demo. */

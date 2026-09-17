@@ -11,6 +11,7 @@ import { ProjectStore } from '../project/ProjectStore';
 import type { Project } from '../project/types';
 import { engineOptionsFor, runProject } from '../project/runProject';
 import { smokeScene2D, smokeScene3D, smokeScripts } from './smoke';
+import { procgenPlugin } from '../procgen/plugin';
 
 const params = new URLSearchParams(location.search);
 const app = document.getElementById('app')!;
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
       document.title = `${project.name} – Forge Player`;
       loading.querySelector('h1')!.textContent = project.name;
       engine = Engine.create(canvas, engineOptionsFor(project, rendererParam === '2d' || rendererParam === '3d' ? { renderer: rendererParam } : {}));
+      engine.use(procgenPlugin); // procedural art library for projects such as Driftwind (ctx.engine.procgen)
       engine.diagnostics.on('error', (d) => console.error('[forge]', d.message, d.error ?? ''));
       await runProject(engine, project, {
         onProgress: (f) => { progress.value = f; },
