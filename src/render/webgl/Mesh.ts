@@ -1,12 +1,22 @@
+/** Axis-aligned bounds of a mesh in local space. */
+export interface MeshBounds {
+  min: [number, number, number];
+  max: [number, number, number];
+}
+
 /** CPU-side mesh geometry. Indexed triangles. */
 export interface MeshData {
   name?: string;
   positions: Float32Array;
   normals?: Float32Array;
   uvs?: Float32Array;
+  /** Optional per-vertex RGB colours (3 floats per vertex), multiplied into the material colour. */
+  colors?: Float32Array;
   indices: Uint16Array | Uint32Array;
   /** Base colour factor from the source material (GLTF), multiplied into the material colour. */
   baseColor?: [number, number, number, number];
+  /** Local-space bounds. Computed from `positions` when omitted; used for frustum culling. */
+  bounds?: MeshBounds;
 }
 
 /** Compute flat-ish smooth normals by accumulating face normals. */
@@ -26,6 +36,27 @@ export function computeNormals(positions: Float32Array, indices: ArrayLike<numbe
   return normals;
 }
 
+/** Axis-aligned bounds of a position array (3 floats per vertex). Empty input yields a zero box. */
+export function computeBounds(positions: ArrayLike<number>): MeshBounds {
+  if (positions.length < 3) return { min: [0, 0, 0], max: [0, 0, 0] };
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < positions.length; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      const v = positions[i + k];
+      if (v < min[k]) min[k] = v;
+      if (v > max[k]) max[k] = v;
+    }
+  }
+  return { min, max };
+}
+
+/** Bounding sphere (centre + radius) enclosing a bounds box. */
+export function boundsSphere(b: MeshBounds): { center: [number, number, number]; radius: number } {
+  const cx = (b.min[0] + b.max[0]) / 2, cy = (b.min[1] + b.max[1]) / 2, cz = (b.min[2] + b.max[2]) / 2;
+  return { center: [cx, cy, cz], radius: Math.hypot(b.max[0] - cx, b.max[1] - cy, b.max[2] - cz) };
+}
+
 /** Unique edge list from triangle indices, for wireframe rendering. */
 export function wireframeIndices(indices: ArrayLike<number>, vertexCount: number): Uint16Array | Uint32Array {
   const edges = new Set<number>();
@@ -42,12 +73,29 @@ export function wireframeIndices(indices: ArrayLike<number>, vertexCount: number
   return vertexCount > 65535 ? new Uint32Array(out) : new Uint16Array(out);
 }
 
-/** GPU resources for a mesh: VAO with position/normal/uv buffers and an instance matrix buffer. */
+/** Vertex attribute locations shared by every mesh shader. */
+export const ATTRIB_POSITION = 0;
+export const ATTRIB_NORMAL = 1;
+export const ATTRIB_UV = 2;
+export const ATTRIB_MODEL0 = 3; // ..6: instance matrix columns
+export const ATTRIB_COLOR = 7;
+
+/**
+ * GPU resources for a mesh: VAO with position/normal/uv(/colour) buffers and
+ * an instance matrix buffer. Bounds are kept for culling.
+ */
 export class GPUMesh {
   readonly vao: WebGLVertexArrayObject;
   readonly indexType: number;
   readonly indexCount: number;
   readonly wireIndexCount: number;
+  /** True when the mesh carries per-vertex colours. */
+  readonly hasColors: boolean;
+  /** Local bounds (from `data.bounds` or computed). */
+  readonly bounds: MeshBounds;
+  /** Local bounding sphere derived from `bounds`. */
+  readonly boundsCenter: Float32Array;
+  readonly boundsRadius: number;
   private buffers: WebGLBuffer[] = [];
   private instanceBuffer: WebGLBuffer;
   private instanceCapacity = 0;
@@ -60,18 +108,20 @@ export class GPUMesh {
     this.vao = vao;
     gl.bindVertexArray(vao);
     const vertexCount = data.positions.length / 3;
-    this.attrib(0, data.positions, 3);
-    this.attrib(1, data.normals ?? computeNormals(data.positions, data.indices), 3);
-    this.attrib(2, data.uvs ?? new Float32Array(vertexCount * 2), 2);
+    this.attrib(ATTRIB_POSITION, data.positions, 3);
+    this.attrib(ATTRIB_NORMAL, data.normals ?? computeNormals(data.positions, data.indices), 3);
+    this.attrib(ATTRIB_UV, data.uvs ?? new Float32Array(vertexCount * 2), 2);
+    this.hasColors = !!data.colors && data.colors.length >= vertexCount * 3;
+    if (this.hasColors) this.attrib(ATTRIB_COLOR, data.colors!, 3);
     // Instance matrix: 4 x vec4 at locations 3..6, divisor 1.
     const ib = gl.createBuffer();
     if (!ib) throw new Error('Failed to create buffer');
     this.instanceBuffer = ib;
     gl.bindBuffer(gl.ARRAY_BUFFER, ib);
     for (let i = 0; i < 4; i++) {
-      gl.enableVertexAttribArray(3 + i);
-      gl.vertexAttribPointer(3 + i, 4, gl.FLOAT, false, 64, i * 16);
-      gl.vertexAttribDivisor(3 + i, 1);
+      gl.enableVertexAttribArray(ATTRIB_MODEL0 + i);
+      gl.vertexAttribPointer(ATTRIB_MODEL0 + i, 4, gl.FLOAT, false, 64, i * 16);
+      gl.vertexAttribDivisor(ATTRIB_MODEL0 + i, 1);
     }
     const idx = gl.createBuffer();
     if (!idx) throw new Error('Failed to create buffer');
@@ -84,6 +134,10 @@ export class GPUMesh {
     this.wireIndexCount = wire.length;
     this.wireData = wire;
     gl.bindVertexArray(null);
+    this.bounds = data.bounds ?? computeBounds(data.positions);
+    const sphere = boundsSphere(this.bounds);
+    this.boundsCenter = new Float32Array(sphere.center);
+    this.boundsRadius = sphere.radius;
   }
 
   private wireData: Uint16Array | Uint32Array;

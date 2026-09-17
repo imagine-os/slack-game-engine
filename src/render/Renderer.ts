@@ -9,6 +9,21 @@ export interface RenderStats {
   primitives: number;
   /** Instanced batches (3D). */
   batches: number;
+  /** Mesh instances drawn in the main pass (3D). */
+  instances: number;
+  /** Triangles drawn in the main pass (3D; same as `primitives`). */
+  triangles: number;
+  /** Instances skipped by frustum culling or LOD hiding (3D). */
+  culled: number;
+  /** Draw calls in the shadow depth pass (3D). */
+  shadowDrawCalls: number;
+  /** Draw calls in the post-processing chain (3D). */
+  postDrawCalls: number;
+}
+
+/** Fresh zeroed stats. */
+export function createRenderStats(): RenderStats {
+  return { drawCalls: 0, primitives: 0, batches: 0, instances: 0, triangles: 0, culled: 0, shadowDrawCalls: 0, postDrawCalls: 0 };
 }
 
 /** Options shared by both renderers. */
@@ -23,6 +38,14 @@ export interface RendererOptions {
   clearColor?: string;
   /** Preserve the WebGL drawing buffer (for screenshots). Default false. */
   preserveDrawingBuffer?: boolean;
+  /** 3D: master switch for directional shadow maps (lights still need `castShadows`). Default true. */
+  shadows?: boolean;
+  /** 3D: shadow map resolution in texels. Default 2048. */
+  shadowMapSize?: number;
+  /** 3D: render the scene at this fraction of the canvas resolution (0.25..1). Default 1. */
+  renderScale?: number;
+  /** 3D: enable the frame-time driven quality ladder (`renderer.autoQuality`). Default false. */
+  autoQuality?: boolean;
 }
 
 /** Services a renderer needs from its host (a subset of the Engine). */
